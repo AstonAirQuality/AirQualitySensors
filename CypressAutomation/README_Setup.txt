@@ -34,9 +34,7 @@ An example of this is shown below
 Step 5.0: Execute cypress through command
 (Ensure your current directory is CypressAutomation, or you will create a new Cypress project) 
 
-run the command " 
- .\node_modules\.bin\cypress run --spec "cypress\integration\examples\PlumeAutomation.js" 
- "
+run the command (.\node_modules\.bin\cypress run --spec "cypress\integration\examples\PlumeAutomation.js")
 
 	Step 5.2: Open Cypress Test runner:
 	
@@ -44,3 +42,5 @@ run the command "
 	(Ensure your current directory is CypressAutomation, or you will create a new Cypress project) 
 
 	run the command ".\node_modules\.bin\cypress open"
+
+	Maunally click onto the PlumeAutomation.js file and test if it works. 
