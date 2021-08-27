@@ -88,6 +88,13 @@ describe('MytestSuite', function()
         cy.intercept('GET', '**/user/export-tasks/*').as('userExport')
         cy.wait('@userExport').its('response.statusCode').should('eq', 200)
 
+        // //check app logo works 
+        // cy.intercept('GET', '**static/media/**').as('appLogo')
+        // cy.wait('@appLogo').its('response.statusCode').should('eq', 200)
+
+        cy.intercept('OPTIONS', '**/user/export-tasks/*').as('export')
+        cy.wait('@export').its('response.statusCode').should('eq', 200)
+
         cy.get('.form-group > .btn').should('have.attr', 'href').and('include', 'https://s3.eu-west-3.amazonaws.com')
         .then(href => {
             cy.writeFile('urls/url.txt', href)
