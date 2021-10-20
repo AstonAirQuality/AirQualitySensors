@@ -1,7 +1,0 @@
-{
-    "email": "Your email",
-    "password": "Your password",
-    "dateStart": "mm/dd/yyyy",
-    "dateEnd": "mm/dd/yyyy",
-    "sensors":["sensor_18699", "sensor_18720", "sensor_18749"]
-  }

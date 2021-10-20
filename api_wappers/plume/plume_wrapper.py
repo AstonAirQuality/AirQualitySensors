@@ -4,19 +4,20 @@ import json
 import pathlib
 import time
 import io
-from typing import List, Dict, Any, Generator, Iterable
+from typing import List, Dict, Any, Iterable, Iterator
 
-import pandas as pd
 import zipfile
 
 import requests
+
+from api_wappers.base_wrapper import BaseWrapper, BaseSensor
 
 
 class APITimeoutException(IOError):
     pass
 
 
-class PlumeSensor:
+class PlumeSensor(BaseSensor):
     """Per sensor object designed to wrap the csv files returned by the Plume API.
 
     Example Usage:
@@ -24,10 +25,8 @@ class PlumeSensor:
         print(ps.DataFrame)
     """
 
-    def __init__(self, id_, header: List, rows: List):
-        self.id = id_
-        self.header = header
-        self.rows = rows
+    def __init__(self, id_, header=(), rows=()):
+        super().__init__(id_, header, rows)
 
     def add_row(self, row: Iterable):
         """Normalise and append row to internal list.
@@ -44,12 +43,6 @@ class PlumeSensor:
         """Returns pollutants found in the header.
         """
         return self.header[2:]
-
-    @property
-    def dataframe(self) -> pd.DataFrame:
-        """Writes headers and rows into a DataFrame.
-        """
-        return pd.DataFrame(self.rows, columns=self.header)
 
     @staticmethod
     def from_csv(sensor_id: str, csv_file: io.StringIO) -> Any:
@@ -68,7 +61,7 @@ class PlumeSensor:
         return sensor
 
 
-class PlumeWrapper:
+class PlumeWrapper(BaseWrapper):
     """API wrapper for the Plume dashboard.
     """
     PLUME_FIREBASE_API_KEY = "AIzaSyA77TeuuxEwGLR3CJV2aQxLYIetMqou5No"
@@ -109,41 +102,37 @@ class PlumeWrapper:
         return session
 
     def get_api_side_task_queue(self) -> Dict:
-        return json.loads(
-            self.session.get(
-                f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}").content)["export_tasks"]
+        return self.session.get(
+            f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}").json()["export_tasks"]
 
-    def get_sensor_ids(self) -> List[str]:
+    def get_sensor_ids(self) -> Iterable[str]:
         try:
-            json_ = (
-                json.loads(
-                    self.session.get(
-                        f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").content))
+            json_ = self.session.get(
+                f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").json()
         except json.JSONDecodeError:
             return []
         return [sensor["id"] for sensor in json_["sensors"]]
 
-    def get_zip_file_link(self, sensors: List[str], start: datetime.datetime, end: datetime.datetime,
+    def get_zip_file_link(self, sensors: Iterable[str], start: datetime.datetime, end: datetime.datetime,
                           timeout=15) -> str:
-        task_id = json.loads(
-            self.session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors/export",
-                              json={
-                                  "sensors": sensors,
-                                  "end_date": int(end.timestamp()),
-                                  "start_date": int(start.timestamp()),
-                                  "gps": False,
-                                  "kml": False,
-                                  "id": "85",
-                                  "no2": True,
-                                  "pm1": True,
-                                  "pm10": True,
-                                  "pm25": True,
-                                  "voc": True
-                              }).content)["id"]
+        task_id = self.session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
+                                    f"{self.org}/sensors/export",
+                                    json={
+                                        "sensors": sensors,
+                                        "end_date": int(end.timestamp()),
+                                        "start_date": int(start.timestamp()),
+                                        "gps": False,
+                                        "kml": False,
+                                        "id": "85",
+                                        "no2": True,
+                                        "pm1": True,
+                                        "pm10": True,
+                                        "pm25": True,
+                                        "voc": True
+                                    }).json()["id"]
         for _ in range(timeout):
             # wait for Plume API to create zip
-            link = json.loads(
-                self.session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").content)["link"]
+            link = self.session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").json()["link"]
             if link:
                 break
             time.sleep(1)
@@ -165,8 +154,8 @@ class PlumeWrapper:
             # split path and strip string to extract sensor id
             yield pathlib.PurePath(name).parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())
 
-    def get_sensor_data(self, sensors: List[str],
-                        start: datetime.datetime, end: datetime.datetime) -> Generator[PlumeSensor, None, None]:
+    def get_sensors(self, sensors: Iterable[str],
+                    start: datetime.datetime, end: datetime.datetime) -> Iterator[PlumeSensor]:
         """Downloads the sensor data from the Plume API and loads to PlumeSensor objects.
 
         :param sensors: sensors to retrieve
@@ -176,3 +165,16 @@ class PlumeWrapper:
         """
         for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end)):
             yield PlumeSensor.from_csv(sensor, buffer)
+
+
+if __name__ == '__main__':
+    # TODO: Make environment variables
+    EMAIL = "180086320@aston.ac.uk"
+    PASSWORD = "aston1234"
+    pw = PlumeWrapper(EMAIL, PASSWORD, 85)
+    sens = pw.get_sensors(pw.get_sensor_ids(),
+                          start=datetime.datetime(2021, 9, 30),
+                          end=datetime.datetime(2021, 10, 13))
+    for s in sens:
+        print(s.id)
+        print(s.dataframe)

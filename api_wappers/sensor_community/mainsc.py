@@ -8,7 +8,7 @@ from typing import List,Iterable
 from requests.models import Response
 
 
-from SensorCommunity import ScWrapper
+from sensor_community_wrapper import ScWrapper
 
 # TODO: Make environment variables
 USERNAME = "190102421@aston.ac.uk"
