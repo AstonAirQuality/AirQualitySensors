@@ -1,9 +1,6 @@
 import datetime
-
-
 import pandas as pd
 import numpy as np
-#import wget #WGET doesn't work here: URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1125)>
 import requests
 import psycopg2
 from datetime import date, datetime, timedelta, timezone
@@ -34,9 +31,9 @@ if __name__ == '__main__':
                                   formatting = FORMAT,
                                   target = TARGET)
 
-    for sensor in sensors:
-        print(sensor.id)
-        print(sensor.df)
-        break
+    # for sensor in sensors:
+    #     print(sensor.id)
+    #     print(sensor.df)
+
     
    

@@ -1,18 +1,11 @@
-import csv
 import datetime
 import json
-import pathlib
-import time
-import io
-from typing import List, Dict, Any, Generator, Iterable
+from typing import List, Dict, Any
 
 import pandas as pd
-#import zipfile
 
 import requests
 
-# from pythonScripts.SensorCommunity.mainCopy import USERNAME
-# from pythonScripts.main import PASSWORD
 
 
 class APITimeoutException(Exception):
@@ -20,12 +13,7 @@ class APITimeoutException(Exception):
 
 
 class ZephyrSensor:
-    """Per sensor object designed to wrap the csv files returned by the Plume API.
-
-    Example Usage:
-        ps = PlumeSensor.from_csv("16397", open("sensor_measures_20211004_20211008_1.csv"))
-        print(ps.DataFrame)
-    """
+    """Sensor class holds dictionary of dataframes and the sensor id"""
 
     def __init__(self, id_, df: pd.DataFrame):
         self.id = id_
@@ -54,6 +42,7 @@ class ZephyrWrapper:
 
 
     def get_sensor_ids(self) -> List[str]:
+        """Fetches sensor ids from Earthsense API """
         try:
             json_ = (requests.get(f"https://data.earthsense.co.uk/zephyrsForUser/{self.username}/{self.password}").json()['usersZephyrs'])
         except json.JSONDecodeError:
@@ -63,42 +52,42 @@ class ZephyrWrapper:
         for key in json_:
             sensorList.append(json_[key]['zNumber'])
 
+        print('✅: Fetching Sensorids Successful')
+
         return sensorList
 
 
     def get_sensor_data(self, sensors: List[str],
                         start: datetime.datetime, end: datetime.datetime,slot,formatting,target) -> List[ZephyrSensor]:
-        """Downloads the sensor data from the Zephyr API and loads to ZephyrSensor objects.
+        """Downloads the sensor data from the Earthsense API and loads to ZephyrSensor objects.
 
         :param sensors: sensors to retrieve
         :param start: start time
         :param end: end time
-        :return: Generator of ZephyrSensor Objects for each sensor populated with data from the API
+        :return: List of ZephyrSensor objects for each sensor populated with data from the API
         """
+
+        print('⚠️: Attempting Sensor CSV Retrieval. Please Wait')
+
         start = start.strftime("%Y%m%d%H%M") 
         end = end.strftime("%Y%m%d%H%M")
 
         sensorList = []
 
-        #!!!!
-        sensors = ['814','821']
-
         for zephyr_id in sensors:
-            print(f"https://data.earthsense.co.uk/dataForViewBySlots/{self.username}/{self.password}/{zephyr_id}/{start}/{end}/{slot}/def/{formatting}/{target}")
-            res = requests.get(f"https://data.earthsense.co.uk/dataForViewBySlots/{self.username}/{self.password}/{zephyr_id}/{start}/{end}/{slot}/def/{formatting}/{target}")
+            url = f"https://data.earthsense.co.uk/dataForViewBySlots/{self.username}/{self.password}/{zephyr_id}/{start}/{end}/{slot}/def/{formatting}/{target}"
+            print(url)
+            res = requests.get(url)
             if res.ok:
-
                 sensorList.append(ZephyrSensor.from_json(zephyr_id, self.json_to_dataframe(res.json()["slot"+slot])))
                 
+        print('✅: JSON Retrieval Successful')
         return sensorList
 
-    #!!!! io.BytesIO() converts to bytes then we  https://stackoverflow.com/questions/42800250/difference-between-open-and-io-bytesio-in-binary-streams
+ 
     def json_to_dataframe(self, json_):
-        """Download and extract zip into memory.
-
-        :param link: url to sensor data zip file
-        :return:sensor id, sensor data in a csv buffer
-        """
+        #TODO data split into dataframe dictionary 
+        '''Extracts json into a dataframe '''
 
         #extracting and preparing the dataframe from the json objects
         df = pd.DataFrame.from_records(json_)
