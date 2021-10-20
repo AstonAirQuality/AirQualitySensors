@@ -1,6 +1,6 @@
 import datetime
 
-from pythonScripts.plume_api_wrapper import PlumeWrapper
+from plume_api_wrapper import PlumeWrapper
 
 # TODO: Make environment variables
 EMAIL = "180086320@aston.ac.uk"
