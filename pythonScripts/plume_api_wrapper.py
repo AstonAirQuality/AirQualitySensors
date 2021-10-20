@@ -12,7 +12,7 @@ import zipfile
 import requests
 
 
-class APITimeoutException(Exception):
+class APITimeoutException(IOError):
     pass
 
 
@@ -94,7 +94,7 @@ class PlumeWrapper:
                                                         "password": password,
                                                         "returnSecureToken": True})
         if not res.ok:
-            raise IOError()
+            raise IOError("Login failed")
         json_ = json.loads(res.content)
         auth_token = json_["idToken"]
         auth_key = json_["localId"]
@@ -148,18 +148,18 @@ class PlumeWrapper:
                 break
             time.sleep(1)
         else:
-            raise APITimeoutException("Plume API timed out attempting when attempting to retrieve zip file link")
+            raise APITimeoutException("Plume API timed out when attempting to retrieve zip file link")
         return link
 
     def extract_zip(self, link):
         """Download and extract zip into memory.
 
         :param link: url to sensor data zip file
-        :return:sensor id, sensor data in a csv buffer
+        :return:sensor id, sensor data in a string buffer
         """
         res = requests.get(link, stream=True)
         if not res.ok:
-            raise IOError()
+            raise IOError(f"Failed to download zip file from link: {link}")
         zip_ = zipfile.ZipFile(io.BytesIO(res.content))
         for name in zip_.namelist():
             # split path and strip string to extract sensor id
