@@ -1,21 +1,19 @@
 import requests
 from datetime import datetime, timedelta, timezone
-import pandas as pd
 import io
 from typing import List, Dict, Any, Iterable, Iterator
 import csv
 
 import lxml.html as lh
 
-#from api_wappers.base_wrapper import BaseSensor, BaseWrapper
-from base_wrapper import BaseSensor,BaseWrapper
+from api_wrappers.base_wrapper import BaseSensor, BaseWrapper
+
 
 class ScSensor(BaseSensor):
     """Per sensor object designed to wrap csv objects returned by the SensorCommunity Archives."""
 
     def __init__(self, id_, header=(), row=()):
         super().__init__(id_, header, row)
-
 
     def add_row(self, row: Iterable):
         self.rows.append([int(i) if str(i).isdigit() else i for i in row])
@@ -27,14 +25,14 @@ class ScSensor(BaseSensor):
         return self.header[2:]
 
     @staticmethod
-    def from_csv(sensor_id: str, csv_fileList: List[io.StringIO] ) -> Any:
+    def from_csv(sensor_id: str, csv_fileList: List[io.StringIO]) -> Any:
         """Factory method builds ScSensor from file like object
         containing csv data.
 
         :param sensor_id: id number of sensor
         :param csv_file: csv file like object
         :return:
-        """      
+        """
         sensor = ScSensor(sensor_id, [], [])
 
         for csv_file in csv_fileList:
@@ -44,6 +42,7 @@ class ScSensor(BaseSensor):
                 sensor.add_row(row)
 
         return sensor
+
 
 class ScWrapper(BaseWrapper):
     """API wrapper for the Sensor Community dashboard."""
@@ -83,7 +82,7 @@ class ScWrapper(BaseWrapper):
 
         except requests.exceptions.ConnectionError:
             raise  # TODO exit program on this exception
-       
+
         return session
 
     def get_sensor_ids(self) -> Dict[str, str]:
@@ -126,7 +125,7 @@ class ScWrapper(BaseWrapper):
                 raise  # TODO exit program on this exception
 
         sensors = dict(zip(sensorids, sensortypes))
- 
+
         return sensors
 
     def get_sensors(self, sensors: Dict[str, str], enddate: datetime, startdate: datetime) -> Iterator[ScSensor]:
@@ -160,27 +159,12 @@ class ScWrapper(BaseWrapper):
                         if res.ok:
                             dataList.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
                         else:
-                            print(f'🛑: No sensor data available for this for sensor {id}, ({sensortype}) on the day: {day} ')
+                            print(
+                                f'🛑: No sensor data available for this for sensor {id}, ({sensortype}) on the day: {day} ')
                             continue
 
-                  
-                except requests.exceptions.ConnectionError:              
+
+                except requests.exceptions.ConnectionError:
                     raise  # TODO exit program on this exception
-            
+
             yield ScSensor.from_csv(id_, dataList)
-
-if __name__ == '__main__':
-    
-    # TODO: Make environment variables
-    USERNAME = "190102421@aston.ac.uk"
-    PASSWORD = "RiyadtheWizard"
-    enddate = datetime.today() - timedelta(days=1)  
-
-    scw = ScWrapper(USERNAME, PASSWORD)
-    
-    #sensors = scw.get_sensors(scw.get_sensor_ids(), enddate, startdate= datetime(2021, 10, 18))
-    sensors = scw.get_sensors({'66007': 'SDS011','66008': 'SHT31'}, enddate, startdate= datetime(2021, 10, 18))
-
-    for sensor in sensors:
-        print(sensor.id)
-        print(sensor.header)

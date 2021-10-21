@@ -5,7 +5,7 @@ from typing import Any, Iterator
 
 import requests
 
-from api_wappers.base_wrapper import BaseSensor, BaseWrapper
+from api_wrappers.base_wrapper import BaseSensor, BaseWrapper
 
 
 class ZephyrSensor(BaseSensor):
@@ -68,17 +68,3 @@ class ZephyrWrapper(BaseWrapper):
                                f"/{slot}/def/json/api")
             if res.ok:
                 yield ZephyrSensor.from_json(id_, res.json()[f"slot{slot}"])
-
-
-if __name__ == '__main__':
-    # TODO: Make environment variables
-    USERNAME = "AstonUniversity"
-    PASSWORD = "Xo08R83d43e0Kk6"
-    zw = ZephyrWrapper(USERNAME, PASSWORD)
-    sensors = zw.get_sensors(zw.get_sensor_ids(),
-                             start=datetime.datetime(2021, 9, 19),
-                             end=datetime.datetime(2021, 9, 20),
-                             slot="B")
-    for s in sensors:
-        print(s.id)
-        print(s.dataframe)

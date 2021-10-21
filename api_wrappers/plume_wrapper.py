@@ -4,13 +4,13 @@ import json
 import pathlib
 import time
 import io
-from typing import List, Dict, Any, Iterable, Iterator
+from typing import Dict, Any, Iterable, Iterator
 
 import zipfile
 
 import requests
 
-from api_wappers.base_wrapper import BaseWrapper, BaseSensor
+from api_wrappers.base_wrapper import BaseWrapper, BaseSensor
 
 
 class APITimeoutException(IOError):
@@ -123,7 +123,7 @@ class PlumeWrapper(BaseWrapper):
                                         "start_date": int(start.timestamp()),
                                         "gps": False,
                                         "kml": False,
-                                        "id": "85",
+                                        "id": self.org,
                                         "no2": True,
                                         "pm1": True,
                                         "pm10": True,
@@ -165,16 +165,3 @@ class PlumeWrapper(BaseWrapper):
         """
         for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end)):
             yield PlumeSensor.from_csv(sensor, buffer)
-
-
-if __name__ == '__main__':
-    # TODO: Make environment variables
-    EMAIL = "180086320@aston.ac.uk"
-    PASSWORD = "aston1234"
-    pw = PlumeWrapper(EMAIL, PASSWORD, 85)
-    sens = pw.get_sensors(pw.get_sensor_ids(),
-                          start=datetime.datetime(2021, 9, 30),
-                          end=datetime.datetime(2021, 10, 13))
-    for s in sens:
-        print(s.id)
-        print(s.dataframe)
