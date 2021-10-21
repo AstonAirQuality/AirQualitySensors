@@ -1,22 +1,51 @@
 import requests
 from datetime import datetime, timedelta, timezone
 import pandas as pd
-
 import io
-from typing import List, Dict
+from typing import List, Dict, Any, Iterable, Iterator
+import csv
 
 import lxml.html as lh
 
+#from api_wappers.base_wrapper import BaseSensor, BaseWrapper
+from base_wrapper import BaseSensor,BaseWrapper
 
-class ScSensor:
-    """Sensor class holds dictionary of dataframes and the sensor id"""
+class ScSensor(BaseSensor):
+    """Per sensor object designed to wrap csv objects returned by the SensorCommunity Archives."""
 
-    def __init__(self, id_, dictionary: Dict[int, pd.DataFrame]):
-        self.id = id_
-        self.dictionary = dictionary
+    def __init__(self, id_, header=(), row=()):
+        super().__init__(id_, header, row)
 
 
-class ScWrapper:
+    def add_row(self, row: Iterable):
+        self.rows.append([int(i) if str(i).isdigit() else i for i in row])
+
+    @property
+    def pollutants(self):
+        """Returns pollutants found in the header.
+        """
+        return self.header[2:]
+
+    @staticmethod
+    def from_csv(sensor_id: str, csv_fileList: List[io.StringIO] ) -> Any:
+        """Factory method builds ScSensor from file like object
+        containing csv data.
+
+        :param sensor_id: id number of sensor
+        :param csv_file: csv file like object
+        :return:
+        """      
+        sensor = ScSensor(sensor_id, [], [])
+
+        for csv_file in csv_fileList:
+            reader = csv.reader(csv_file, dialect=csv.unix_dialect)
+            sensor.header = next(reader)
+            for row in reader:
+                sensor.add_row(row)
+
+        return sensor
+
+class ScWrapper(BaseWrapper):
     """API wrapper for the Sensor Community dashboard."""
 
     def __init__(self, username: str, password: str):
@@ -33,7 +62,6 @@ class ScWrapper:
         res = session.get('https://devices.sensor.community/login')
         doc = lh.fromstring(res.text)
         csrftoken = doc.xpath('//input[@name="csrf_token"]/@value')[0]
-        print('✅: csrf token scraping Successful')
 
         try:
             res = session.post('https://devices.sensor.community/login', allow_redirects=True,
@@ -54,16 +82,12 @@ class ScWrapper:
                     break
 
         except requests.exceptions.ConnectionError:
-            print('🛑: Connection error. Rerun the code or check you connection')
             raise  # TODO exit program on this exception
-
-        print('✅: Lookup_id Scraping Successful')
+       
         return session
 
     def get_sensor_ids(self) -> Dict[str, str]:
         '''Gets the sensor's id and type (webscaping) using the lookupid from dashboard'''
-
-        print('⚠️: Attempting Sensor Id And Type Scraping. Please Wait')
 
         # Create empty list for sensor ids
         sensorids = []
@@ -99,30 +123,24 @@ class ScWrapper:
 
 
             except requests.exceptions.ConnectionError:
-                print('🛑: Connection error. Rerun the code or check you connection')
                 raise  # TODO exit program on this exception
 
         sensors = dict(zip(sensorids, sensortypes))
-        print('✅: Sensor Id And Type Scraping Successful')
-
+ 
         return sensors
 
-    def get_sensor_data_csv(self, sensors: Dict[str, str], enddate: datetime, startdate: datetime) -> List[ScSensor]:
-
-        print('⚠️: Attempting Sensor CSV Retrieval. Please Wait')
+    def get_sensors(self, sensors: Dict[str, str], enddate: datetime, startdate: datetime) -> Iterator[ScSensor]:
 
         '''Gets each sensor csv and appends each one into a dictioanry of dataframes. 
         This dictionary is used to intialise a sensorwhich is then itself appended into a list of sensors'''
-
-        sensorList = []
 
         difference = enddate - startdate
 
         for key in sensors:
 
-            dataframeDict = {}
+            dataList = []
             sensortype = sensors[key].lower()
-            id = key
+            id_ = key
 
             for i in range(difference.days + 1):
                 day = (startdate + timedelta(days=i))
@@ -130,39 +148,39 @@ class ScWrapper:
                 day = day.strftime("%Y-%m-%d")
 
                 try:
-                    url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id}.csv'
+                    url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id_}.csv'
                     res = requests.get(url, stream=True)
 
                     if res.ok:
-                        dataframeDict[timestamp] = self.from_csv(res.content)
-
+                        dataList.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
                     else:
-                        url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id}_indoor.csv'
+                        url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id_}_indoor.csv'
                         res = requests.get(url, stream=True)
 
                         if res.ok:
-                            dataframeDict[timestamp] = self.from_csv(res.content)
-
+                            dataList.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
                         else:
-                            print(
-                                f'🛑: No sensor data available for this for sensor {id}, ({sensortype}) on the day: {day} ')
+                            print(f'🛑: No sensor data available for this for sensor {id}, ({sensortype}) on the day: {day} ')
                             continue
 
-                    print(url)
-                except requests.exceptions.ConnectionError:
-                    print('🛑: Connection error. Rerun the code or check you connection ')
+                  
+                except requests.exceptions.ConnectionError:              
                     raise  # TODO exit program on this exception
+            
+            yield ScSensor.from_csv(id_, dataList)
 
-            sensorList.append(ScSensor(id, dataframeDict))
+if __name__ == '__main__':
+    
+    # TODO: Make environment variables
+    USERNAME = "190102421@aston.ac.uk"
+    PASSWORD = "RiyadtheWizard"
+    enddate = datetime.today() - timedelta(days=1)  
 
-        print('✅: CSV Retrieval Successful')
-        return sensorList
+    scw = ScWrapper(USERNAME, PASSWORD)
+    
+    #sensors = scw.get_sensors(scw.get_sensor_ids(), enddate, startdate= datetime(2021, 10, 18))
+    sensors = scw.get_sensors({'66007': 'SDS011','66008': 'SHT31'}, enddate, startdate= datetime(2021, 10, 18))
 
-    def from_csv(self, content: bytes) -> pd.DataFrame:
-        '''Extracts csv into a dataframe using a buffer to avoid writing file to disk'''
-        file_ = io.BytesIO(content)
-        buffer = io.StringIO(file_.read().decode('UTF-8'))
-
-        df = pd.read_csv(buffer, delimiter=';')
-
-        return df
+    for sensor in sensors:
+        print(sensor.id)
+        print(sensor.header)
