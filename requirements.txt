@@ -2,3 +2,5 @@ pandas
 requests
 numpy
 lxml
+bs4
+beautifulsoup4

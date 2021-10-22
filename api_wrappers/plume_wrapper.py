@@ -28,16 +28,6 @@ class PlumeSensor(BaseSensor):
     def __init__(self, id_, header=(), rows=()):
         super().__init__(id_, header, rows)
 
-    def add_row(self, row: Iterable):
-        """Normalise and append row to internal list.
-
-        Coverts all digits to int objects, all elements are initially converted to strings before
-        digit check to avoid type errors.
-
-        :param row: row to add to plume sensor
-        """
-        self.rows.append([int(i) if str(i).isdigit() else i for i in row])
-
     @property
     def pollutants(self):
         """Returns pollutants found in the header.
@@ -68,7 +58,7 @@ class PlumeWrapper(BaseWrapper):
 
     def __init__(self, email: str, password: str, org_number: int):
         self.org = str(org_number)
-        self.session = self.__login(email, password)
+        self.__session = self.__login(email, password)
 
     def __login(self, email, password) -> requests.Session:
         """Logs into the Plume API
@@ -102,12 +92,12 @@ class PlumeWrapper(BaseWrapper):
         return session
 
     def get_api_side_task_queue(self) -> Dict:
-        return self.session.get(
+        return self.__session.get(
             f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}").json()["export_tasks"]
 
     def get_sensor_ids(self) -> Iterable[str]:
         try:
-            json_ = self.session.get(
+            json_ = self.__session.get(
                 f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").json()
         except json.JSONDecodeError:
             return []
@@ -115,24 +105,25 @@ class PlumeWrapper(BaseWrapper):
 
     def get_zip_file_link(self, sensors: Iterable[str], start: datetime.datetime, end: datetime.datetime,
                           timeout=15) -> str:
-        task_id = self.session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
-                                    f"{self.org}/sensors/export",
-                                    json={
-                                        "sensors": sensors,
-                                        "end_date": int(end.timestamp()),
-                                        "start_date": int(start.timestamp()),
-                                        "gps": False,
-                                        "kml": False,
-                                        "id": self.org,
-                                        "no2": True,
-                                        "pm1": True,
-                                        "pm10": True,
-                                        "pm25": True,
-                                        "voc": True
-                                    }).json()["id"]
+        task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
+                                      f"{self.org}/sensors/export",
+                                      json={
+                                          "sensors": sensors,
+                                          "end_date": int(end.timestamp()),
+                                          "start_date": int(start.timestamp()),
+                                          "gps": False,
+                                          "kml": False,
+                                          "id": self.org,
+                                          "no2": True,
+                                          "pm1": True,
+                                          "pm10": True,
+                                          "pm25": True,
+                                          "voc": True
+                                      }).json()["id"]
         for _ in range(timeout):
             # wait for Plume API to create zip
-            link = self.session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").json()["link"]
+            link = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").json()[
+                "link"]
             if link:
                 break
             time.sleep(1)

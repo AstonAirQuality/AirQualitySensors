@@ -1,7 +1,7 @@
 import datetime
 
 from api_wrappers.plume_wrapper import PlumeWrapper
-from api_wrappers.sensor_community_wrapper import ScWrapper
+from api_wrappers.sensor_community_wrapper import SCWrapper
 from api_wrappers.zephyr_wrapper import ZephyrWrapper
 
 # TODO: Make environment variables
@@ -21,16 +21,16 @@ def zephyr_test():
                              start=datetime.datetime(2021, 9, 19),
                              end=datetime.datetime(2021, 9, 20),
                              slot="B")
-    for s in sensors:
-        print(s.id)
-        print(s.dataframe)
+    for sensor in sensors:
+        print(sensor.id)
+        print(sensor.dataframe)
 
 
 def sensor_community_test():
-    scw = ScWrapper(SC_USERNAME, SC_PASSWORD)
+    scw = SCWrapper(SC_USERNAME, SC_PASSWORD)
     sensors = scw.get_sensors({'66007': 'SDS011', '66008': 'SHT31'},
-                              datetime.datetime.today() - datetime.timedelta(days=1),
-                              startdate=datetime.datetime(2021, 10, 18))
+                              end=datetime.datetime.today() - datetime.timedelta(days=1),
+                              start=datetime.datetime(2021, 10, 18))
 
     for sensor in sensors:
         print(sensor.id)
@@ -39,13 +39,15 @@ def sensor_community_test():
 
 def plume_test():
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sens = pw.get_sensors(pw.get_sensor_ids(),
-                          start=datetime.datetime(2021, 9, 30),
-                          end=datetime.datetime(2021, 10, 13))
-    for s in sens:
-        print(s.id)
-        print(s.dataframe)
+    sensors = pw.get_sensors(pw.get_sensor_ids(),
+                             start=datetime.datetime(2021, 9, 30),
+                             end=datetime.datetime(2021, 10, 13))
+    for sensor in sensors:
+        print(sensor.id)
+        print(sensor.dataframe)
 
 
 if __name__ == '__main__':
     sensor_community_test()
+    zephyr_test()
+    plume_test()

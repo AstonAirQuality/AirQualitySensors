@@ -1,170 +1,134 @@
-import requests
-from datetime import datetime, timedelta, timezone
-import io
-from typing import List, Dict, Any, Iterable, Iterator
 import csv
+import io
+import datetime
+from typing import List, Dict, Any, Iterator, Tuple
 
+import bs4
 import lxml.html as lh
+import requests
 
 from api_wrappers.base_wrapper import BaseSensor, BaseWrapper
 
 
-class ScSensor(BaseSensor):
-    """Per sensor object designed to wrap csv objects returned by the SensorCommunity Archives."""
+class SCSensor(BaseSensor):
+    """Per sensor object designed to wrap csv objects returned by the SensorCommunity archives."""
 
     def __init__(self, id_, header=(), row=()):
         super().__init__(id_, header, row)
 
-    def add_row(self, row: Iterable):
-        self.rows.append([int(i) if str(i).isdigit() else i for i in row])
-
-    @property
-    def pollutants(self):
-        """Returns pollutants found in the header.
-        """
-        return self.header[2:]
-
     @staticmethod
-    def from_csv(sensor_id: str, csv_fileList: List[io.StringIO]) -> Any:
-        """Factory method builds ScSensor from file like object
+    def from_csv(sensor_id: str, csv_files: List[io.StringIO]) -> Any:
+        """Factory method builds SCSensor from file like object
         containing csv data.
 
         :param sensor_id: id number of sensor
-        :param csv_file: csv file like object
+        :param csv_files: list of csv file like objects
         :return:
         """
-        sensor = ScSensor(sensor_id, [], [])
-
-        for csv_file in csv_fileList:
-            reader = csv.reader(csv_file, dialect=csv.unix_dialect)
+        sensor = SCSensor(sensor_id)
+        for csv_file in csv_files:
+            reader = csv.reader(csv_file, delimiter=";")
             sensor.header = next(reader)
             for row in reader:
-                sensor.add_row(row)
-
+                # zip header and row then drop unwanted columns before committing row to sensor object
+                dict_ = dict(zip(sensor.header, row))
+                dict_.pop("sensor_id")
+                dict_.pop("sensor_type")
+                sensor.add_row(list(dict_.values()))
+            # remove unwanted headers
+            sensor.header.remove("sensor_id")
+            sensor.header.remove("sensor_type")
         return sensor
 
 
-class ScWrapper(BaseWrapper):
+class SCWrapper(BaseWrapper):
     """API wrapper for the Sensor Community dashboard."""
 
     def __init__(self, username: str, password: str):
-        self.username = username
-        self.password = password
-        self.session = self.__login(username, password)
+        self.__session, page = self.__login(username, password)
+        self.__lookup_ids = list(self.__get_lookup_ids(page))
 
-    def __login(self, username, password) -> requests.Session:
-        """Handles logging in and fetches look ids from the dashboard (webscaping)"""
+    def __get_lookup_ids(self, page: str) -> Iterator[str]:
+        """Fetches look ids from the dashboard"""
+        soup = bs4.BeautifulSoup(page, "lxml")
+        # look for data button and extract sensor id from link inside
+        for element in soup.find_all("a", {"class": "btn btn-sm btn-info"}):
+            href = element.get("href")
+            if href is not None:
+                yield href.split("/")[2]
+
+    def __login(self, username, password) -> Tuple[requests.Session, str]:
+        """Handles logging in"""
 
         session = requests.Session()
-
         # fetching the csrf token for logging in
         res = session.get('https://devices.sensor.community/login')
-        doc = lh.fromstring(res.text)
-        csrftoken = doc.xpath('//input[@name="csrf_token"]/@value')[0]
-
+        csrf_token = lh.fromstring(res.text).xpath('//input[@name="csrf_token"]/@value')[0]
         try:
             res = session.post('https://devices.sensor.community/login', allow_redirects=True,
-                               data={"next": "", "csrf_token": csrftoken, "email": username, "password": password,
+                               data={"next": "",
+                                     "csrf_token": csrf_token,
+                                     "email": username,
+                                     "password": password,
                                      "submit": "Login"})
-            self.lookupids = []
+        except IOError:
+            raise IOError("Login failed")
 
-            # Store the contents of the website under doc
-            doc = lh.fromstring(res.text)
-            # Parse data that are stored between <tr>..</tr> of HTML
-            tr_elements = doc.xpath('//tr')
-
-            for i in range(1, (len(tr_elements) - 1)):
-                T = tr_elements[i]
-                for t in T.iterchildren():
-                    data = t.text_content()
-                    self.lookupids.append(data)
-                    break
-
-        except requests.exceptions.ConnectionError:
-            raise  # TODO exit program on this exception
-
-        return session
+        return session, res.text
 
     def get_sensor_ids(self) -> Dict[str, str]:
-        '''Gets the sensor's id and type (webscaping) using the lookupid from dashboard'''
+        """Gets the sensor's id and type using the lookup_id from dashboard"""
 
-        # Create empty list for sensor ids
-        sensorids = []
-        sensortypes = []
+        sensor_ids = list()
+        sensor_types = list()
 
-        for id in self.lookupids:
-            try:
-                session = self.session
+        for id_ in self.__lookup_ids:
+            res = self.__session.get(f'https://devices.sensor.community/sensors/{id_}/data')
+            # Parse data stored between 1st <tr>..</tr> which itself is within the <table>..</table> of HTML
+            doc = lh.fromstring(res.text)
+            tr_elements = doc.xpath('//table/descendant::tr[1]')
+            # First loop is retrieves sensor id
+            # For each row, store each first element (header) and an empty list
+            for t in tr_elements:
+                # t[1] = element which holds the id
+                data = t[1].text_content()[0:5]
+                sensor_ids.append(data)
+            # Second loop retrieves sensor type
+            # Parse data that are stored between 1st <h2>..</h2> of HTML
+            # For each row, store each first element (header) and an empty list
+            for h in doc.xpath('//h2'):
+                sensor_type = h.text_content()[-6:].strip()
+                sensor_types.append(sensor_type.lower())
 
-                res = session.get(f'https://devices.sensor.community/sensors/{id}/data')
+        return dict(zip(sensor_ids, sensor_types))
 
-                # Store the contents of the website under doc
-                doc = lh.fromstring(res.text)
+    def get_sensors(self, sensors: Dict[str, str],
+                    start: datetime.datetime, end: datetime.datetime) -> Iterator[SCSensor]:
+        """Downloads the sensor data from the Earth sense dashboard and loads to SCSensor objects.
 
-                '''This first loop is to get the sensor id'''
-                # Parse data that are stored between 1st <tr>..</tr> which itself is within the <table>..</table> of HTML
-                tr_elements = doc.xpath('//table/descendant::tr[1]')
+        :param sensors: dictionary mapping of {sensor_ids: sensor_types}
+        :param start: start date
+        :param end: end date
+        :return: SCSensor objects containing scraped csv data
+        """
 
-                # For each row, store each first element (header) and an empty list
-                for t in tr_elements:
-                    # t[1] is the td element which holds the id
-                    data = t[1].text_content()[0:5]
-                    sensorids.append(data)
+        difference = end - start
 
-                '''This second loop is to get the sensor type'''
-                # Parse data that are stored between 1st <h2>..</h2> of HTML
-                h2_elements = doc.xpath('//h2')
-
-                # For each row, store each first element (header) and an empty list
-                for h in h2_elements:
-                    sensortype = h.text_content()[-6:].strip()
-                    sensortypes.append(sensortype)
-
-
-            except requests.exceptions.ConnectionError:
-                raise  # TODO exit program on this exception
-
-        sensors = dict(zip(sensorids, sensortypes))
-
-        return sensors
-
-    def get_sensors(self, sensors: Dict[str, str], enddate: datetime, startdate: datetime) -> Iterator[ScSensor]:
-
-        '''Gets each sensor csv and appends each one into a dictioanry of dataframes. 
-        This dictionary is used to intialise a sensorwhich is then itself appended into a list of sensors'''
-
-        difference = enddate - startdate
-
-        for key in sensors:
-
-            dataList = []
-            sensortype = sensors[key].lower()
-            id_ = key
+        for id_, sensor_type in sensors.items():
+            data = list()
+            sensor_type = sensor_type.lower()
 
             for i in range(difference.days + 1):
-                day = (startdate + timedelta(days=i))
-                timestamp = int(day.replace(tzinfo=timezone.utc).timestamp())
-                day = day.strftime("%Y-%m-%d")
+                day = (start + datetime.timedelta(days=i)).strftime("%Y-%m-%d")
 
-                try:
-                    url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id_}.csv'
+                url = f'https://archive.sensor.community/{day}/{day}_{sensor_type}_sensor_{id_}.csv'
+                res = requests.get(url, stream=True)
+                if res.ok:
+                    data.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
+                else:
+                    url = f'https://archive.sensor.community/{day}/{day}_{sensor_type}_sensor_{id_}_indoor.csv'
                     res = requests.get(url, stream=True)
-
                     if res.ok:
-                        dataList.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
-                    else:
-                        url = f'https://archive.sensor.community/{day}/{day}_{sensortype}_sensor_{id_}_indoor.csv'
-                        res = requests.get(url, stream=True)
+                        data.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
 
-                        if res.ok:
-                            dataList.append(io.StringIO(io.BytesIO(res.content).read().decode('UTF-8')))
-                        else:
-                            print(
-                                f'🛑: No sensor data available for this for sensor {id}, ({sensortype}) on the day: {day} ')
-                            continue
-
-
-                except requests.exceptions.ConnectionError:
-                    raise  # TODO exit program on this exception
-
-            yield ScSensor.from_csv(id_, dataList)
+            yield SCSensor.from_csv(id_, data)

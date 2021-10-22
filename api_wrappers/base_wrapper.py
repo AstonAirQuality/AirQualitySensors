@@ -15,9 +15,14 @@ class BaseSensor:
         self.rows = list(row)
 
     def add_row(self, row: Iterable):
-        """Append row to internal rows list
+        """Normalise and append row to internal list.
+
+        Coverts all digits to int objects, all elements are initially converted to strings before
+        digit check to avoid type errors.
+
+        :param row: row to add to plume sensor
         """
-        self.rows.append(row)
+        self.rows.append([int(i) if str(i).isdigit() else i for i in row])
 
     @property
     def dataframe(self) -> pd.DataFrame:
