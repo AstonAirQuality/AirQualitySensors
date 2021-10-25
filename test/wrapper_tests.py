@@ -48,6 +48,6 @@ def plume_test():
 
 
 if __name__ == '__main__':
+    plume_test()
     sensor_community_test()
     zephyr_test()
-    plume_test()
