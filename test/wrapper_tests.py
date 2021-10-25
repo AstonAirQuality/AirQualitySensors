@@ -1,8 +1,8 @@
 import datetime
 
-from api_wrappers.plume_wrapper import PlumeWrapper
-from api_wrappers.sensor_community_wrapper import SCWrapper
-from api_wrappers.zephyr_wrapper import ZephyrWrapper
+from app.api_wrappers.plume_wrapper import PlumeWrapper
+from app.api_wrappers.sensor_community_wrapper import SCWrapper
+from app.api_wrappers.zephyr_wrapper import ZephyrWrapper
 
 # TODO: Make environment variables
 ZEPHYR_USERNAME = "AstonUniversity"

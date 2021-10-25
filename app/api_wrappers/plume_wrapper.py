@@ -10,7 +10,7 @@ import zipfile
 
 import requests
 
-from api_wrappers.base_wrapper import BaseWrapper, BaseSensor
+from .base_wrapper import BaseWrapper, BaseSensor
 
 
 class APITimeoutException(IOError):

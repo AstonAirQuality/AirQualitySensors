@@ -5,7 +5,7 @@ from typing import Any, Iterator
 
 import requests
 
-from api_wrappers.base_wrapper import BaseSensor, BaseWrapper
+from .base_wrapper import BaseSensor, BaseWrapper
 
 
 class ZephyrSensor(BaseSensor):

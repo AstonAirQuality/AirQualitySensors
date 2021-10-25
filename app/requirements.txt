@@ -1,0 +1,8 @@
+pandas
+requests
+numpy
+lxml
+beautifulsoup4
+celery[redis]
+fastapi
+uvicorn

@@ -7,7 +7,7 @@ import bs4
 import lxml.html as lh
 import requests
 
-from api_wrappers.base_wrapper import BaseSensor, BaseWrapper
+from .base_wrapper import BaseSensor, BaseWrapper
 
 
 class SCSensor(BaseSensor):
@@ -51,7 +51,7 @@ class SCWrapper(BaseWrapper):
     def __get_lookup_ids(self, page: str) -> Iterator[str]:
         """Fetches look ids from the dashboard"""
         soup = bs4.BeautifulSoup(page, "lxml")
-        # look for data button and extract sensor id from link inside
+        # look for data button and extract lookup id from link inside
         for element in soup.find_all("a", {"class": "btn btn-sm btn-info"}):
             href = element.get("href")
             if href is not None:

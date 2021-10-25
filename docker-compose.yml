@@ -1,0 +1,41 @@
+version: '3'
+services:
+  web-server:
+    container_name: web-server
+    build: ./app
+    ports:
+      - 8000:8000
+    command: uvicorn main:app --host 0.0.0.0
+    volumes:
+      - ./app:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    links:
+      - redis
+  celery-worker:
+    container_name: celery-worker
+    build: ./app
+    command: celery -A tasks worker --loglevel=INFO
+    volumes:
+      - ./app:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ZEPHYR_USERNAME=AstonUniversity
+      - ZEPHYR_PASSWORD=Xo08R83d43e0Kk6
+      - SC_USERNAME=190102421@aston.ac.uk
+      - SC_PASSWORD=RiyadtheWizard
+      - PLUME_EMAIL=180086320@aston.ac.uk
+      - PLUME_PASSWORD=aston1234
+    links:
+      - web-server
+      - redis
+  redis:
+    container_name: redis
+    image: redis:6-alpine
+    ports:
+      - 6379:6379
+
+
+
