@@ -5,4 +5,5 @@ lxml
 beautifulsoup4
 celery[redis]
 fastapi
+gunicorn
 uvicorn
