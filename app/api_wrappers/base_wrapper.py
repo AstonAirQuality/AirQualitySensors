@@ -1,7 +1,26 @@
 import abc
-from typing import Iterable
+import functools
+from typing import Iterable, Union
+
+import datetime as dt
 
 import pandas as pd
+
+
+def correct_timestamp(func):
+    """
+    decorator converts start and end timestamps to datetime objects
+    """
+
+    @functools.wraps(func)
+    def stub(self, start, end, *args, **kwargs):
+        if type(start) in (int, float):
+            start = dt.datetime.fromtimestamp(start)
+        if type(end) in (int, float):
+            end = dt.datetime.fromtimestamp(end)
+        return func(self, start, end, *args, **kwargs)
+
+    return stub
 
 
 class BaseSensor:
@@ -38,5 +57,5 @@ class BaseWrapper(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def get_sensors(self, *args, **kwargs):
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int], *args, **kwargs):
         ...

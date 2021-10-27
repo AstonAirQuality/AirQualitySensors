@@ -1,13 +1,13 @@
 import csv
 import io
-import datetime
-from typing import List, Dict, Any, Iterator, Tuple
+import datetime as dt
+from typing import List, Dict, Any, Iterator, Tuple, Union
 
 import bs4
 import lxml.html as lh
 import requests
 
-from .base_wrapper import BaseSensor, BaseWrapper
+from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
 
 
 class SCSensor(BaseSensor):
@@ -102,8 +102,9 @@ class SCWrapper(BaseWrapper):
 
         return dict(zip(sensor_ids, sensor_types))
 
-    def get_sensors(self, sensors: Dict[str, str],
-                    start: datetime.datetime, end: datetime.datetime) -> Iterator[SCSensor]:
+    @correct_timestamp
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: Union[dt.datetime, float, int],
+                    sensors: Dict[str, str]) -> Iterator[SCSensor]:
         """Downloads the sensor data from the Earth sense dashboard and loads to SCSensor objects.
 
         :param sensors: dictionary mapping of {sensor_ids: sensor_types}
@@ -119,7 +120,7 @@ class SCWrapper(BaseWrapper):
             sensor_type = sensor_type.lower()
 
             for i in range(difference.days + 1):
-                day = (start + datetime.timedelta(days=i)).strftime("%Y-%m-%d")
+                day = (start + dt.timedelta(days=i)).strftime("%Y-%m-%d")
 
                 url = f'https://archive.sensor.community/{day}/{day}_{sensor_type}_sensor_{id_}.csv'
                 res = requests.get(url, stream=True)

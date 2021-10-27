@@ -1,16 +1,16 @@
 import csv
-import datetime
+import datetime as dt
 import json
 import pathlib
 import time
 import io
-from typing import Dict, Any, Iterable, Iterator
+from typing import Dict, Any, Iterable, Iterator, Union
 
 import zipfile
 
 import requests
 
-from .base_wrapper import BaseWrapper, BaseSensor
+from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp
 
 
 class APITimeoutException(IOError):
@@ -103,7 +103,7 @@ class PlumeWrapper(BaseWrapper):
             return []
         return [sensor["id"] for sensor in json_["sensors"]]
 
-    def get_zip_file_link(self, sensors: Iterable[str], start: datetime.datetime, end: datetime.datetime,
+    def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
                           timeout=15) -> str:
         task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
                                       f"{self.org}/sensors/export",
@@ -145,8 +145,9 @@ class PlumeWrapper(BaseWrapper):
             # split path and strip string to extract sensor id
             yield pathlib.PurePath(name).parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())
 
-    def get_sensors(self, sensors: Iterable[str],
-                    start: datetime.datetime, end: datetime.datetime) -> Iterator[PlumeSensor]:
+    @correct_timestamp
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int],
+                    sensors: Iterable[str]) -> Iterator[PlumeSensor]:
         """Downloads the sensor data from the Plume API and loads to PlumeSensor objects.
 
         :param sensors: sensors to retrieve

@@ -1,11 +1,11 @@
-import datetime
+import datetime as dt
 import itertools
 import json
-from typing import Any, Iterator
+from typing import Any, Iterator, Union
 
 import requests
 
-from .base_wrapper import BaseSensor, BaseWrapper
+from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
 
 
 class ZephyrSensor(BaseSensor):
@@ -48,17 +48,18 @@ class ZephyrWrapper(BaseWrapper):
         for key in json_:
             yield json_[key]['zNumber']
 
-    def get_sensors(self, sensors_ids: Iterator[str], start: datetime.datetime, end: datetime.datetime,
-                    slot: str) -> Iterator[ZephyrSensor]:
+    @correct_timestamp
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: Union[dt.datetime, float, int],
+                    slot: str, sensors: Iterator[str]) -> Iterator[ZephyrSensor]:
         """Fetch json from API and return built Zephyr sensor objects.
 
-        :param sensors_ids: id for senors to retrieve
+        :param sensors: id for senors to retrieve
         :param start: measurement start date
         :param end:  measurement end date
         :param slot: ???
         :return: ZephyrSensor objects
         """
-        for id_ in sensors_ids:
+        for id_ in sensors:
             res = requests.get(f"https://data.earthsense.co.uk/dataForViewBySlots/"
                                f"{self.__username}"
                                f"/{self.__pass}"

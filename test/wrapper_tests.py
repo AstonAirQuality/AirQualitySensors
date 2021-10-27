@@ -17,9 +17,9 @@ PLUME_PASSWORD = "aston1234"
 
 def zephyr_test():
     zw = ZephyrWrapper(ZEPHYR_USERNAME, ZEPHYR_PASSWORD)
-    sensors = zw.get_sensors(zw.get_sensor_ids(),
-                             start=datetime.datetime(2021, 9, 19),
+    sensors = zw.get_sensors(start=datetime.datetime(2021, 9, 19),
                              end=datetime.datetime(2021, 9, 20),
+                             sensors=zw.get_sensor_ids(),
                              slot="B")
     for sensor in sensors:
         print(sensor.id)
@@ -28,9 +28,9 @@ def zephyr_test():
 
 def sensor_community_test():
     scw = SCWrapper(SC_USERNAME, SC_PASSWORD)
-    sensors = scw.get_sensors({'66007': 'SDS011', '66008': 'SHT31'},
-                              end=datetime.datetime.today() - datetime.timedelta(days=1),
-                              start=datetime.datetime(2021, 10, 18))
+    sensors = scw.get_sensors(end=datetime.datetime.today() - datetime.timedelta(days=1),
+                              start=datetime.datetime(2021, 10, 18),
+                              sensors={'66007': 'SDS011', '66008': 'SHT31'})
 
     for sensor in sensors:
         print(sensor.id)
@@ -39,15 +39,15 @@ def sensor_community_test():
 
 def plume_test():
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sensors = pw.get_sensors(pw.get_sensor_ids(),
-                             start=datetime.datetime(2021, 9, 30),
-                             end=datetime.datetime(2021, 10, 13))
+    sensors = pw.get_sensors(start=datetime.datetime(2021, 9, 30),
+                             end=datetime.datetime(2021, 10, 13),
+                             sensors=pw.get_sensor_ids())
     for sensor in sensors:
         print(sensor.id)
         print(sensor.dataframe)
 
 
 if __name__ == '__main__':
-    plume_test()
     sensor_community_test()
     zephyr_test()
+    plume_test()
