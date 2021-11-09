@@ -4,7 +4,7 @@ import json
 import pathlib
 import time
 import io
-from typing import Dict, Any, Iterable, Iterator, Union
+from typing import List,Dict, Any, Iterable, Iterator, Union
 
 import zipfile
 
@@ -18,10 +18,10 @@ class APITimeoutException(IOError):
 
 
 class PlumeSensor(BaseSensor):
-    """Per sensor object designed to wrap the csv files returned by the Plume API.
+    """Per sensor object designed to wrap the dictionary formatted data returned by the Plume API.
 
     Example Usage:
-        ps = PlumeSensor.from_csv("16397", open("sensor_measures_20211004_20211008_1.csv"))
+        ps = PlumeSensor.from_csv("16397", [ {'id':11242, 'date': 163365002, 'no2': 0.0021, 'voc': 4.122415, 'pm1': 2.41 ,'pm25': 4.21,'pm10':67.215} ])
         print(ps.DataFrame)
     """
 
@@ -35,19 +35,18 @@ class PlumeSensor(BaseSensor):
         return self.header[2:]
 
     @staticmethod
-    def from_csv(sensor_id: str, csv_file: io.StringIO) -> Any:
+    def from_dict(sensor_id: str, dictionaries: List) -> Any:
         """Factory method builds PlumeSensor from file like object
-        containing csv data.
+        containing data in a dictionary format.
 
         :param sensor_id: id number of sensor
-        :param csv_file: csv file like object
+        :param dictionaries: list of dictionaries which contain the sensor data
         :return:
         """
-        reader = csv.reader(csv_file, dialect=csv.unix_dialect)
-        header = next(reader)
-        sensor = PlumeSensor(sensor_id, header, [])
-        for row in reader:
-            sensor.add_row(row)
+        header = list(dictionaries[0].keys())[1::]
+        rows = [list(row.values())[1::] for row in dictionaries]
+        sensor = PlumeSensor(sensor_id, header, rows)
+    
         return sensor
 
 
@@ -102,58 +101,61 @@ class PlumeWrapper(BaseWrapper):
         except json.JSONDecodeError:
             return []
         return [sensor["id"] for sensor in json_["sensors"]]
-
-    def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
-                          timeout=15) -> str:
-        task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
-                                      f"{self.org}/sensors/export",
-                                      json={
-                                          "sensors": sensors,
-                                          "end_date": int(end.timestamp()),
-                                          "start_date": int(start.timestamp()),
-                                          "gps": False,
-                                          "kml": False,
-                                          "id": self.org,
-                                          "no2": True,
-                                          "pm1": True,
-                                          "pm10": True,
-                                          "pm25": True,
-                                          "voc": True
-                                      }).json()["id"]
-        for _ in range(timeout):
-            # wait for Plume API to create zip
-            link = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").json()[
-                "link"]
-            if link:
-                break
-            time.sleep(1)
-        else:
-            raise APITimeoutException("Plume API timed out when attempting to retrieve zip file link")
-        return link
-
-    def extract_zip(self, link):
-        """Download and extract zip into memory.
-
-        :param link: url to sensor data zip file
-        :return:sensor id, sensor data in a string buffer
-        """
-        res = requests.get(link, stream=True)
-        if not res.ok:
-            raise IOError(f"Failed to download zip file from link: {link}")
-        zip_ = zipfile.ZipFile(io.BytesIO(res.content))
-        for name in zip_.namelist():
-            # split path and strip string to extract sensor id
-            yield pathlib.PurePath(name).parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())
-
+        
     @correct_timestamp
-    def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int],
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: Union[dt.datetime, float, int],
                     sensors: Iterable[str]) -> Iterator[PlumeSensor]:
         """Downloads the sensor data from the Plume API and loads to PlumeSensor objects.
 
         :param sensors: sensors to retrieve
         :param start: start time
         :param end: end time
-        :return: Generator of PlumeSensor Objects for each sensor populated with data from the API
+        :return: Iterator of PlumeSensor Objects for each sensor populated with data from the API
         """
-        for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end)):
-            yield PlumeSensor.from_csv(sensor, buffer)
+        for sensorId in sensors:
+            res = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/organizations/85/sensors/{sensorId}/measures?start_date={int(start.timestamp())}&end_date={int(end.timestamp())}&offset=0",
+                        data={"start_date": start, "end_date": end,"offset": 0})
+            yield PlumeSensor.from_dict(sensorId, res.json()['measures'])
+            break #TODO remove
+
+    # def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
+    #                       timeout=15) -> str:
+    #     task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
+    #                                   f"{self.org}/sensors/export",
+    #                                   json={
+    #                                       "sensors": sensors,
+    #                                       "end_date": int(end.timestamp()),
+    #                                       "start_date": int(start.timestamp()),
+    #                                       "gps": False,
+    #                                       "kml": False,
+    #                                       "id": self.org,
+    #                                       "no2": True,
+    #                                       "pm1": True,
+    #                                       "pm10": True,
+    #                                       "pm25": True,
+    #                                       "voc": True
+    #                                   }).json()["id"]
+    #     for _ in range(timeout):
+    #         # wait for Plume API to create zip
+    #         link = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/export-tasks/{task_id}").json()[
+    #             "link"]
+    #         if link:
+    #             break
+    #         time.sleep(1)
+    #     else:
+    #         raise APITimeoutException("Plume API timed out when attempting to retrieve zip file link")
+    #     return link
+
+    # def extract_zip(self, link):
+    #     """Download and extract zip into memory.
+
+    #     :param link: url to sensor data zip file
+    #     :return:sensor id, sensor data in a string buffer
+    #     """
+    #     res = requests.get(link, stream=True)
+    #     if not res.ok:
+    #         raise IOError(f"Failed to download zip file from link: {link}")
+    #     zip_ = zipfile.ZipFile(io.BytesIO(res.content))
+    #     for name in zip_.namelist():
+    #         # split path and strip string to extract sensor id
+    #         yield pathlib.PurePath(name).parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())

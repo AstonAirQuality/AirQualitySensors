@@ -57,5 +57,5 @@ class BaseWrapper(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int], *args, **kwargs):
+    def get_sensors(self, start: Union[dt.datetime, float, int], end: Union[dt.datetime, float, int], *args, **kwargs):
         ...
