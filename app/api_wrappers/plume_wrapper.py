@@ -35,18 +35,21 @@ class PlumeSensor(BaseSensor):
         return self.header[2:]
 
     @staticmethod
-    def from_dict(sensor_id: str, dictionaries: List) -> Any:
+    def from_dict(sensor_id: str, data: List) -> Any:
         """Factory method builds PlumeSensor from file like object
         containing data in a dictionary format.
 
         :param sensor_id: id number of sensor
-        :param dictionaries: list of dictionaries which contain the sensor data
+        :param data: list of list of dictionaries which contain the sensor data
         :return:
         """
-        header = list(dictionaries[0].keys())[1::]
-        rows = [list(row.values())[1::] for row in dictionaries]
-        sensor = PlumeSensor(sensor_id, header, rows)
-    
+        header =  list(data[0][0].keys())[1::]
+        rowList = []
+        for dictionaries in data:
+           rows = [list(row.values())[1::] for row in dictionaries]
+           rowList += rows
+        sensor = PlumeSensor(sensor_id, header, rowList)
+
         return sensor
 
 
@@ -112,11 +115,21 @@ class PlumeWrapper(BaseWrapper):
         :param end: end time
         :return: Iterator of PlumeSensor Objects for each sensor populated with data from the API
         """
+
+        difference = end - start
+
         for sensorId in sensors:
-            res = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/organizations/85/sensors/{sensorId}/measures?start_date={int(start.timestamp())}&end_date={int(end.timestamp())}&offset=0",
-                        data={"start_date": start, "end_date": end,"offset": 0})
-            yield PlumeSensor.from_dict(sensorId, res.json()['measures'])
-            break #TODO remove
+            dataList = []
+            offset = 0
+            for i in range(difference.days + 1):
+                if ((i-1) % 2 == 0):
+                    offset += 2000
+                res = self.__session.get(f"https://api-preprod.plumelabs.com/2.0/user/organizations/85/sensors/{sensorId}/measures?start_date={int(start.timestamp())}&end_date={int(end.timestamp())}&offset={offset}",
+                            data={"start_date": start, "end_date": end,"offset": offset})
+                dataList.append(res.json()['measures'])
+
+            yield PlumeSensor.from_dict(sensorId, dataList)
+            
 
     # def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
     #                       timeout=15) -> str:
