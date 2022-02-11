@@ -9,8 +9,11 @@ services:
     volumes:
       - ./app:/usr/src/app
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      INFLUXDB_V2_URL: "http://influxdb:8086"
+      INFLUXDB_V2_ORG: "aston"
+      INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
     links:
       - redis
   celery-worker:
@@ -20,14 +23,14 @@ services:
     volumes:
       - ./app:/usr/src/app
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - ZEPHYR_USERNAME=AstonUniversity
-      - ZEPHYR_PASSWORD=Xo08R83d43e0Kk6
-      - SC_USERNAME=190102421@aston.ac.uk
-      - SC_PASSWORD=RiyadtheWizard
-      - PLUME_EMAIL=180086320@aston.ac.uk
-      - PLUME_PASSWORD=aston1234
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      ZEPHYR_USERNAME: "AstonUniversity"
+      ZEPHYR_PASSWORD: "Xo08R83d43e0Kk6"
+      SC_USERNAME: "190102421@aston.ac.uk"
+      SC_PASSWORD: "RiyadtheWizard"
+      PLUME_EMAIL: "180086320@aston.ac.uk"
+      PLUME_PASSWORD: "aston1234"
     links:
       - web-server
       - redis
@@ -36,6 +39,21 @@ services:
     image: redis:6-alpine
     ports:
       - 6379:6379
+  # local instance of influx db for testing environment
+  influxdb:
+    image: influxdb
+    ports:
+      - "8086:8086"
+  # Use the influx cli to set up an influxdb instance.
+  influxdb_cli:
+    links:
+      - influxdb
+    image: influxdb
+    entrypoint: influx setup --bucket plume -t 2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA== -o aston --username=aston --password=aston12345 --host=http://influxdb:8086 -f
+    restart: on-failure:10
+    depends_on:
+      - influxdb
+
 
 
 

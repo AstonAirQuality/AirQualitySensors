@@ -2,19 +2,39 @@ import csv
 import datetime as dt
 import json
 import pathlib
+import re
 import time
 import io
+from collections import namedtuple
 from typing import Dict, Any, Iterable, Iterator, Union
 
 import zipfile
 
 import requests
 
-from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp
+from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp, BaseSensorIterator
 
 
 class APITimeoutException(IOError):
     pass
+
+
+class PlumeSensorIterator(BaseSensorIterator):
+
+    def __init__(self, sensor_id, header, rows):
+        super().__init__(sensor_id, header, rows)
+
+    def __next__(self):
+        """
+        Implements the BaseSensorIterator API
+        """
+        if self._index >= len(self.rows):
+            raise StopIteration()
+        row = self.rows[self._index]
+        fields = dict(zip(self.header[2:], row[2:]))
+        ret = self.Row(row[0], fields, {"sensor_id": self.sensor_id})
+        self._index += 1
+        return ret
 
 
 class PlumeSensor(BaseSensor):
@@ -25,8 +45,8 @@ class PlumeSensor(BaseSensor):
         print(ps.DataFrame)
     """
 
-    def __init__(self, id_, header=(), rows=()):
-        super().__init__(id_, header, rows)
+    def __init__(self, sensor_id, header=(), rows=()):
+        super().__init__(int(sensor_id), header, rows)
 
     @property
     def pollutants(self):
@@ -49,6 +69,9 @@ class PlumeSensor(BaseSensor):
         for row in reader:
             sensor.add_row(row)
         return sensor
+
+    def __iter__(self):
+        return PlumeSensorIterator(self.id, self.header, self.rows)
 
 
 class PlumeWrapper(BaseWrapper):

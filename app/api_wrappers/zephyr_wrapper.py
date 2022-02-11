@@ -29,6 +29,9 @@ class ZephyrSensor(BaseSensor):
             zs.add_row(row)
         return zs
 
+    def __iter__(self):
+        pass
+
 
 class ZephyrWrapper(BaseWrapper):
     """API wrapper for the Zephyr API."""

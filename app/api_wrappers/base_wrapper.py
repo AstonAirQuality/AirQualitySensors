@@ -1,5 +1,6 @@
 import abc
 import functools
+from collections import namedtuple
 from typing import Iterable, Union
 
 import datetime as dt
@@ -23,6 +24,23 @@ def correct_timestamp(func):
     return stub
 
 
+class BaseSensorIterator:
+    Row = namedtuple("Row", "timestamp fields tags")
+
+    def __init__(self, id_, header, rows):
+        self.sensor_id = id_
+        self.header = header
+        self.rows = rows
+        self._index = 0
+
+    @abc.abstractmethod
+    def __next__(self):
+        """
+        :return: namedtuple(timestamp=timestamp, fields={...}, tags={...})
+        """
+        ...
+
+
 class BaseSensor:
     """
     Base class for sensor objects
@@ -41,13 +59,28 @@ class BaseSensor:
 
         :param row: row to add to plume sensor
         """
-        self.rows.append([int(i) if str(i).isdigit() else i for i in row])
+        final_row = []
+        for entry in row:
+            i = str(entry)
+            if i.isdigit():
+                final_row.append(int(i))
+            else:
+                try:
+                    final_row.append(float(i))
+                except ValueError:
+                    # append to original entry type
+                    final_row.append(entry)
+        self.rows.append(final_row)
 
     @property
     def dataframe(self) -> pd.DataFrame:
         """Writes headers and rows into a DataFrame.
         """
         return pd.DataFrame(self.rows, columns=self.header)
+
+    @abc.abstractmethod
+    def __iter__(self):
+        ...
 
 
 class BaseWrapper(abc.ABC):

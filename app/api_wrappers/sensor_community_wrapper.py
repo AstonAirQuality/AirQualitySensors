@@ -40,6 +40,9 @@ class SCSensor(BaseSensor):
             sensor.header.remove("sensor_type")
         return sensor
 
+    def __iter__(self):
+        pass
+
 
 class SCWrapper(BaseWrapper):
     """API wrapper for the Sensor Community dashboard."""
