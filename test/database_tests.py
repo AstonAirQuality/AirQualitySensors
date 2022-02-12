@@ -20,3 +20,7 @@ def write_plume_to_influx():
                              sensors=pw.get_sensor_ids())
     for sensor in sensors:
         Influx.write("plume", sensor, client=InfluxDBClient(url=INFLUX_URL, org=INFLUX_ORG, token=INFLUX_TOKEN))
+
+
+if __name__ == '__main__':
+    write_plume_to_influx()

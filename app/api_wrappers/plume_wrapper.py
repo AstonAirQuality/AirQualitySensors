@@ -7,8 +7,8 @@ import io
 from typing import Dict, Any, Iterable, Iterator, Union
 
 import zipfile
-
 import requests
+import s2sphere
 
 from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp, BaseSensorIterator
 
@@ -21,16 +21,46 @@ class PlumeSensorIterator(BaseSensorIterator):
 
     def __init__(self, sensor_id, header, rows):
         super().__init__(sensor_id, header, rows)
+        self.correct_long_lat()
+
+    def correct_long_lat(self):
+        """latitude and longitude are added to the objects header if they are not already contained. Row lengths are
+        subsequently corrected with empty floats.
+        """
+        for direction in ["latitude", "longitude"]:
+            if direction not in self.header:
+                self.header.append(direction)
+                for row in self.rows:
+                    row.append(0.0)
+        for row in self.rows:
+            # round long and latitude to 4 decimal palaces (11.1m) to reduce series cardinality and keep db performant.
+            # http://wiki.gis.com/wiki/index.php/Decimal_degrees
+            row[-1] = round(row[-1], 5)
+            row[-2] = round(row[-2], 5)
+
+    def get_s2_cell_token(self, long, lat):
+        """
+        The Geo package uses the S2 Geometry Library to represent geographic coordinates on a three-dimensional sphere.
+        The sphere is divided into cells, each with a unique 64-bit identifier (S2 cell ID).
+        Grid and S2 cell ID accuracy are defined by a level.
+
+        https://docs.influxdata.com/influxdb/cloud/query-data/flux/geo/shape-geo-data/#generate-s2-cell-id-tokens-language-specific-libraries
+        """
+        return s2sphere.CellId.from_lat_lng(s2sphere.LatLng(long, lat)).to_token()
 
     def __next__(self):
         """
         Implements the BaseSensorIterator API
+
+        sensor_id, s2_cell_id are indexed by the database as tags.
+        remaining measurements, latitude and longitude are stored in non-indexed fields.
+
         """
         if self._index >= len(self.rows):
             raise StopIteration()
         row = self.rows[self._index]
         fields = dict(zip(self.header[2:], row[2:]))
-        ret = self.Row(row[0], fields, {"sensor_id": self.id})
+        ret = self.Row(row[0], fields, {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(row[-1], row[-2])})
         self._index += 1
         return ret
 
@@ -43,7 +73,7 @@ class PlumeSensor(BaseSensor):
         print(ps.DataFrame)
 
     Headers:
-        timestamp,"date (UTC)","NO2 (ppb)","VOC (ppb)","pm 10 (ug/m3)","pm 2.5 (ug/m3)","NO2 (Plume AQI)","VOC (Plume AQI)","pm 10 (Plume AQI)","pm 2.5 (Plume AQI)"
+        timestamp,"date (UTC)","NO2 (ppb)","VOC (ppb)","pm 10 (ug/m3)","pm 2.5 (ug/m3)","NO2 (Plume AQI)","VOC (Plume AQI)","pm 10 (Plume AQI)","pm 2.5 (Plume AQI)","latitude","logitude"
 
     """
 
@@ -138,15 +168,16 @@ class PlumeWrapper(BaseWrapper):
         return [sensor["id"] for sensor in json_["sensors"]]
 
     def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
-                          timeout=15) -> str:
+                          timeout=30) -> str:
         task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
                                       f"{self.org}/sensors/export",
                                       json={
                                           "sensors": sensors,
                                           "end_date": int(end.timestamp()),
                                           "start_date": int(start.timestamp()),
-                                          "gps": False,
+                                          "gps": True,
                                           "kml": False,
+                                          "merged": True,
                                           "id": self.org,
                                           "no2": True,
                                           "pm1": True,
@@ -176,8 +207,11 @@ class PlumeWrapper(BaseWrapper):
             raise IOError(f"Failed to download zip file from link: {link}")
         zip_ = zipfile.ZipFile(io.BytesIO(res.content))
         for name in zip_.namelist():
-            # split path and strip string to extract sensor id
-            yield pathlib.PurePath(name).parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())
+            path_parts = pathlib.PurePath(name).parts
+            # extract only location merged sensor data
+            if path_parts[3] == "sensor_merged_1.csv":
+                # split path and strip string to extract sensor id
+                yield path_parts[2].lstrip("sensor_"), io.StringIO(zip_.read(name).decode())
 
     @correct_timestamp
     def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int],

@@ -1,6 +1,6 @@
 import os
 import datetime as dt
-from influxdb_client import InfluxDBClient, WriteOptions, Point, WritePrecision
+from influxdb_client import InfluxDBClient, WriteOptions, Point
 
 from app.api_wrappers.base_wrapper import BaseSensor
 from app.api_wrappers.plume_wrapper import PlumeSensor
@@ -18,7 +18,7 @@ class Influx:
         return InfluxDBClient(url=url, org=org, token=token)
 
     @staticmethod
-    def write(bucket: str, sensor_data: BaseSensor, measurement="pollutant", client=None):
+    def write(bucket: str, sensor_data: BaseSensor, measurement="air_quality", client=None):
         # select static client if no client is specified by the user, helps with testability
         writer = (Influx.get_client() if client is None else client).write_api(
             write_options=WriteOptions(batch_size=50_000, flush_interval=10_000))
