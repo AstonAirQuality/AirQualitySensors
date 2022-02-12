@@ -2,10 +2,8 @@ import csv
 import datetime as dt
 import json
 import pathlib
-import re
 import time
 import io
-from collections import namedtuple
 from typing import Dict, Any, Iterable, Iterator, Union
 
 import zipfile
@@ -32,7 +30,7 @@ class PlumeSensorIterator(BaseSensorIterator):
             raise StopIteration()
         row = self.rows[self._index]
         fields = dict(zip(self.header[2:], row[2:]))
-        ret = self.Row(row[0], fields, {"sensor_id": self.sensor_id})
+        ret = self.Row(row[0], fields, {"sensor_id": self.id})
         self._index += 1
         return ret
 
@@ -43,10 +41,23 @@ class PlumeSensor(BaseSensor):
     Example Usage:
         ps = PlumeSensor.from_csv("16397", open("sensor_measures_20211004_20211008_1.csv"))
         print(ps.DataFrame)
+
+    Headers:
+        timestamp,"date (UTC)","NO2 (ppb)","VOC (ppb)","pm 10 (ug/m3)","pm 2.5 (ug/m3)","NO2 (Plume AQI)","VOC (Plume AQI)","pm 10 (Plume AQI)","pm 2.5 (Plume AQI)"
+
     """
 
     def __init__(self, sensor_id, header=(), rows=()):
         super().__init__(int(sensor_id), header, rows)
+
+    def add_row(self, row: list):
+        """Standardise types to ints and floats to avoid type conflicts at the database level
+
+        Convert first element (timestamp) to int, keep second element type, change all other elements to floats
+
+        TODO: Standardise and clean up to account for potential changes to the plume API.
+        """
+        self.rows.append([int(row[0]), row[1], *[float(i) if i else 0.0 for i in row[2:]]])
 
     @property
     def pollutants(self):

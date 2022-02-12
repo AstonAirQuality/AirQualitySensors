@@ -25,10 +25,12 @@ def correct_timestamp(func):
 
 
 class BaseSensorIterator:
+    """Creates an influxdb compatible named tuple for each row in the sensor object
+    """
     Row = namedtuple("Row", "timestamp fields tags")
 
     def __init__(self, id_, header, rows):
-        self.sensor_id = id_
+        self.id = id_
         self.header = header
         self.rows = rows
         self._index = 0
@@ -57,20 +59,23 @@ class BaseSensor:
         Coverts all digits to int objects, all elements are initially converted to strings before
         digit check to avoid type errors.
 
+        TODO: Move normalisation to subclasses
+
         :param row: row to add to plume sensor
         """
-        final_row = []
-        for entry in row:
-            i = str(entry)
-            if i.isdigit():
-                final_row.append(int(i))
-            else:
-                try:
-                    final_row.append(float(i))
-                except ValueError:
-                    # append to original entry type
-                    final_row.append(entry)
-        self.rows.append(final_row)
+        # final_row = []
+        # for entry in row:
+        #     i = str(entry)
+        #     if i.isdigit():
+        #         final_row.append(int(i))
+        #     else:
+        #         try:
+        #             final_row.append(float(i))
+        #         except ValueError:
+        #             # append to original entry type
+        #             final_row.append(entry)
+        # self.rows.append(final_row)
+        self.rows.append(row)
 
     @property
     def dataframe(self) -> pd.DataFrame:

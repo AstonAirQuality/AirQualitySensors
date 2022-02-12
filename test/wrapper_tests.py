@@ -43,10 +43,8 @@ def plume_test():
                              end=datetime.datetime(2021, 10, 13),
                              sensors=pw.get_sensor_ids())
     for sensor in sensors:
-        for i in sensor:
-            print(i)
-        # print(sensor.id)
-        # print(sensor.dataframe)
+        print(sensor.id)
+        print(sensor.dataframe)
 
 
 if __name__ == '__main__':
