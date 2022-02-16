@@ -57,6 +57,7 @@ class PlumeSensorIterator(BaseSensorIterator):
 
         """
         if self._index >= len(self.rows):
+            self._index = 0
             raise StopIteration()
         row = self.rows[self._index]
         fields = dict(zip(self.header[2:], row[2:]))

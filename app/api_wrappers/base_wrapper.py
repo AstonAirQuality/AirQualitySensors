@@ -87,6 +87,9 @@ class BaseSensor:
     def __iter__(self):
         ...
 
+    def __repr__(self):
+        return f"{self.id} | Headers {self.header} | Row count: {len(self.rows)}"
+
 
 class BaseWrapper(abc.ABC):
 

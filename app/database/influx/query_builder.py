@@ -6,7 +6,7 @@ class InfluxQueryBuilder:
     """
 
     def __init__(self, bucket):
-        self.__bucket = bucket
+        self.bucket = bucket
         self.__function_chain = {"range": None, "filters": None}
         self.__fields = []
 
@@ -55,7 +55,7 @@ class InfluxQueryBuilder:
         """
         if self.__fields:
             self.filter(" or ".join(self.__fields))
-        query = f"from(bucket: \"{self.__bucket}\")"
+        query = f"from(bucket: \"{self.bucket}\")"
         for k, v in self.__function_chain.items():
             if v is not None:
                 if type(v) is list:
