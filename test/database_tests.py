@@ -1,11 +1,10 @@
 import datetime
 
-import pandas as pd
 from influxdb_client import InfluxDBClient
 
 from app.api_wrappers.plume_wrapper import PlumeWrapper
-from app.database.influx.influx import Influx
-from app.database.influx.query_builder import InfluxQueryBuilder
+from app.influx import Influx
+from app.influx import InfluxQueryBuilder
 
 INFLUX_URL = "http://127.0.0.1:8086"
 INFLUX_ORG = "aston"

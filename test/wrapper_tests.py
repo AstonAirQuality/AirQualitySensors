@@ -39,12 +39,12 @@ def sensor_community_test():
 
 def plume_test():
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sensors = pw.get_sensors(start=datetime.datetime(2021, 9, 30),
-                             end=datetime.datetime(2021, 10, 13),
-                             sensors=pw.get_sensor_ids())
+    sensors = pw.get_sensors(start=datetime.datetime.now() - datetime.timedelta(2),  # day before
+                             end=datetime.datetime.now() - datetime.timedelta(1),  # yesterday
+                             sensors=pw.get_sensor_ids(),
+                             timeout=300)
     for sensor in sensors:
-        for i in sensor:
-            print(i)
+        print(sensor.id)
 
 
 if __name__ == '__main__':

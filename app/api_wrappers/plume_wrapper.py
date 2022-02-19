@@ -169,7 +169,7 @@ class PlumeWrapper(BaseWrapper):
         return [sensor["id"] for sensor in json_["sensors"]]
 
     def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
-                          timeout=30) -> str:
+                          timeout) -> str:
         task_id = self.__session.post(f"https://api-preprod.plumelabs.com/2.0/user/organizations/"
                                       f"{self.org}/sensors/export",
                                       json={
@@ -216,13 +216,14 @@ class PlumeWrapper(BaseWrapper):
 
     @correct_timestamp
     def get_sensors(self, start: Union[dt.datetime, float, int], end: [dt.datetime, float, int],
-                    sensors: Iterable[str]) -> Iterator[PlumeSensor]:
+                    sensors: Iterable[str], timeout=30) -> Iterator[PlumeSensor]:
         """Downloads the sensor data from the Plume API and loads to PlumeSensor objects.
 
+        :param timeout: wait this many seconds before timing out request to plume api
         :param sensors: sensors to retrieve
         :param start: start time
         :param end: end time
         :return: Generator of PlumeSensor Objects for each sensor populated with data from the API
         """
-        for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end)):
+        for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end, timeout)):
             yield PlumeSensor.from_csv(sensor, buffer)
