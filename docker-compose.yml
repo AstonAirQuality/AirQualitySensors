@@ -34,6 +34,15 @@ services:
     links:
       - web-server
       - redis
+  flower:
+    image: mher/flower
+    command: [ "celery", "flower", "--basic_auth=aston:aston1234" ]
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      FLOWER_PORT: "8888"
+      FLOWER_HOST: "0.0.0.0"
+    ports:
+      - 8888:8888
   redis:
     container_name: redis
     image: redis:6-alpine
