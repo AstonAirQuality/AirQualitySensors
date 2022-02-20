@@ -78,7 +78,7 @@ def write_plume_to_influx():
 
 app.conf.beat_schedule = {
     # Executes plume task every day at mid night
-    'add-every-monday-morning': {
+    'every-day': {
         'task': 'tasks.write_plume_to_influx',
         'schedule': crontab(hour=0, minute=0),
         'args': (),
