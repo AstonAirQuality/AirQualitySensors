@@ -7,6 +7,7 @@ import os
 from typing import Tuple
 
 from celery import Celery
+from celery.schedules import crontab
 
 from api_wrappers.plume_wrapper import PlumeWrapper
 from api_wrappers.zephyr_wrapper import ZephyrWrapper
@@ -25,6 +26,16 @@ def get_dates() -> Tuple[datetime, datetime]:
     :return: start, end -> (now - 1 day), (now - 2 days)
     """
     return datetime.now() - timedelta(1), datetime.now() - timedelta(2)
+
+
+# @app.on_after_configure.connect
+# def setup_periodic_tasks(sender, **kwargs):
+#     """
+#     Daily tasks to retrieve sensor data.
+#     """
+#     sender.add_periodic_task(86400.0, write_plume_to_influx(name="plume_daily_task"))
+#     sender.add_periodic_task(60.0, get_zephyr_data(*get_dates()), name="zephyr daily task")
+#     sender.add_periodic_task(60.0, get_sensor_community_data(*get_dates()), name="sensor community daily task")
 
 
 @app.task(name="get_plume_data")
@@ -57,7 +68,7 @@ def write_plume_to_influx():
     sensors = pw.get_sensors(start=datetime.now() - timedelta(2),  # day before
                              end=datetime.now() - timedelta(1),  # yesterday
                              sensors=pw.get_sensor_ids(),
-                             timeout=600)
+                             timeout=600)  # 10 minute time out
     ids = []
     for sensor in sensors:
         ids.append(sensor.id)
@@ -65,11 +76,11 @@ def write_plume_to_influx():
     return ids
 
 
-@app.on_after_configure.connect
-def setup_periodic_tasks(sender, **kwargs):
-    """
-    Daily tasks to retrieve sensor data.
-    """
-    sender.add_periodic_task(86400.0, write_plume_to_influx(name="plume_daily_task"))
-    # sender.add_periodic_task(60.0, get_zephyr_data(*get_dates()), name="zephyr daily task")
-    # sender.add_periodic_task(60.0, get_sensor_community_data(*get_dates()), name="sensor community daily task")
+app.conf.beat_schedule = {
+    # Executes plume task every day at mid night
+    'add-every-monday-morning': {
+        'task': 'tasks.write_plume_to_influx',
+        'schedule': crontab(hour=0, minute=0),
+        'args': (),
+    },
+}
