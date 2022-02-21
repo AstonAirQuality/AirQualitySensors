@@ -15,6 +15,7 @@ from api_wrappers.base_wrapper import BaseSensor
 from influx import Influx
 
 app = Celery('tasks', broker=os.environ.get("CELERY_BROKER_URL"), backend=os.environ.get("CELERY_RESULT_BACKEND"))
+app.conf.update(result_expires=3600, enable_utc=True, timezone='UTC')
 
 
 def to_json(sensor: BaseSensor):
@@ -26,16 +27,6 @@ def get_dates() -> Tuple[datetime, datetime]:
     :return: start, end -> (now - 1 day), (now - 2 days)
     """
     return datetime.now() - timedelta(1), datetime.now() - timedelta(2)
-
-
-# @app.on_after_configure.connect
-# def setup_periodic_tasks(sender, **kwargs):
-#     """
-#     Daily tasks to retrieve sensor data.
-#     """
-#     sender.add_periodic_task(86400.0, write_plume_to_influx(name="plume_daily_task"))
-#     sender.add_periodic_task(60.0, get_zephyr_data(*get_dates()), name="zephyr daily task")
-#     sender.add_periodic_task(60.0, get_sensor_community_data(*get_dates()), name="sensor community daily task")
 
 
 @app.task(name="get_plume_data")
@@ -62,8 +53,8 @@ def get_sensor_community_data(start: float, end: float):
     return []
 
 
-@app.task(name="write_plume_data_to_db")
-def write_plume_to_influx():
+@app.task(name="write_plume_data_to_influx")
+def write_plume_data_to_influx():
     pw = PlumeWrapper(os.environ.get("PLUME_EMAIL"), os.environ.get("PLUME_PASSWORD"), 85)
     sensors = pw.get_sensors(start=datetime.now() - timedelta(2),  # day before
                              end=datetime.now() - timedelta(1),  # yesterday
@@ -76,11 +67,9 @@ def write_plume_to_influx():
     return ids
 
 
-app.conf.beat_schedule = {
-    # Executes plume task every day at mid night
-    'every-day': {
-        'task': 'tasks.write_plume_to_influx',
-        'schedule': crontab(hour=0, minute=0),
-        'args': (),
-    },
-}
+@app.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    """
+    Daily tasks to retrieve sensor data.
+    """
+    sender.add_periodic_task(crontab(hour=0, minute=0), write_plume_data_to_influx.s())

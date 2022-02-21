@@ -1,5 +1,5 @@
 fastapi==0.60.0
-celery[redis]==5.1.2
+celery[redis]==5.2.3
 pandas==1.0.4
 requests==2.25.1
 beautifulsoup4==4.9.1

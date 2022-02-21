@@ -24,6 +24,6 @@ def get_task(task_id):
 
 if __name__ == '__main__':
     update_db()
-    # # res = create_task("plume")
-    # # print(res.text)
-    # get_task("72923c0b-9a1e-4bb4-84f4-29ac48424be8")
+    # res = create_task("plume")
+    # print(res.text)
+    # get_task("c20f72eb-584b-4713-9c03-6a755f0c5062")

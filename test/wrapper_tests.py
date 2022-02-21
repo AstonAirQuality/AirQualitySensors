@@ -37,12 +37,9 @@ def sensor_community_test():
         print(sensor.dataframe)
 
 
-def plume_test():
+def plume_test(start, end):
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sensors = pw.get_sensors(start=datetime.datetime.now() - datetime.timedelta(2),  # day before
-                             end=datetime.datetime.now() - datetime.timedelta(1),  # yesterday
-                             sensors=pw.get_sensor_ids(),
-                             timeout=300)
+    sensors = pw.get_sensors(start=start, end=end, sensors=pw.get_sensor_ids(), timeout=300)
     for sensor in sensors:
         print(sensor.id)
 
@@ -50,4 +47,5 @@ def plume_test():
 if __name__ == '__main__':
     # sensor_community_test()
     # zephyr_test()
-    plume_test()
+    # plume_test(datetime.datetime.now() - datetime.timedelta(2), datetime.datetime.now() - datetime.timedelta(1))
+    plume_test(datetime.datetime(2022, 1, 1), datetime.datetime(2022, 1, 31))

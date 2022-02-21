@@ -206,6 +206,9 @@ class PlumeWrapper(BaseWrapper):
         res = requests.get(link, stream=True)
         if not res.ok:
             raise IOError(f"Failed to download zip file from link: {link}")
+        if not len(res.content):
+            # return an empty iterator if zip file is empty
+            return ()
         zip_ = zipfile.ZipFile(io.BytesIO(res.content))
         for name in zip_.namelist():
             path_parts = pathlib.PurePath(name).parts

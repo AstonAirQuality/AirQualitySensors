@@ -16,10 +16,33 @@ services:
       INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
     links:
       - redis
+  # celery worker process
   celery-worker:
     container_name: celery-worker
     build: ./app
     command: celery -A tasks worker --loglevel=INFO
+    volumes:
+      - ./app:/app
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      ZEPHYR_USERNAME: "AstonUniversity"
+      ZEPHYR_PASSWORD: "Xo08R83d43e0Kk6"
+      SC_USERNAME: "190102421@aston.ac.uk"
+      SC_PASSWORD: "RiyadtheWizard"
+      PLUME_EMAIL: "180086320@aston.ac.uk"
+      PLUME_PASSWORD: "aston1234"
+      INFLUXDB_V2_URL: "http://influxdb:8086"
+      INFLUXDB_V2_ORG: "aston"
+      INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
+    links:
+      - web-server
+      - redis
+  # celery beat process separate to workers
+  celery-beat:
+    container_name: celery-beat
+    build: ./app
+    command: celery -A tasks beat --loglevel=INFO
     volumes:
       - ./app:/app
     environment:

@@ -4,7 +4,7 @@ API end point
 from fastapi import FastAPI, Form
 from celery.result import AsyncResult
 
-from tasks import get_plume_data, get_zephyr_data, get_sensor_community_data, write_plume_to_influx
+from tasks import get_plume_data, get_zephyr_data, get_sensor_community_data, write_plume_data_to_influx
 
 app = FastAPI()
 func_map = {"plume": get_plume_data,
@@ -38,5 +38,5 @@ def get_result(task_id: str):
 
 @app.post("/api/tasks/database/update")
 def update_influx_db():
-    task = write_plume_to_influx.delay()
+    task = write_plume_data_to_influx.delay()
     return {"task_id": task.id}
