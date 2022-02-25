@@ -1,3 +1,6 @@
+"""
+TODO: Implement Readable and Writable classes
+"""
 import datetime as dt
 import itertools
 import json
@@ -11,8 +14,8 @@ from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
 class ZephyrSensor(BaseSensor):
     """Per sensor object designed to wrap json objects returned by the Earth sense API."""
 
-    def __init__(self, id_, header=(), row=()):
-        super().__init__(id_, header, row)
+    def __init__(self, id_, header=(), rows=()):
+        super().__init__(id_, header, rows)
 
     @staticmethod
     def from_json(id_, data: dict) -> Any:
@@ -29,7 +32,7 @@ class ZephyrSensor(BaseSensor):
             zs.add_row(row)
         return zs
 
-    def __iter__(self):
+    def get_writable(self):
         pass
 
 

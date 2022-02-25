@@ -8,47 +8,26 @@ from typing import Dict, Any, Iterable, Iterator, Union
 
 import zipfile
 import requests
-import s2sphere
 
-from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp, BaseSensorIterator
+from .base_wrapper import BaseWrapper, BaseSensor, correct_timestamp, BaseSensorWritable, BaseSensorReadable
 
 
 class APITimeoutException(IOError):
     pass
 
 
-class PlumeSensorIterator(BaseSensorIterator):
+class PlumeSensorReadable(BaseSensorReadable):
+    def __init__(self, sensor_id, header, rows):
+        super().__init__(sensor_id, header, rows)
+
+
+class PlumeSensorWritable(BaseSensorWritable):
 
     def __init__(self, sensor_id, header, rows):
         super().__init__(sensor_id, header, rows)
         self.correct_long_lat()
 
-    def correct_long_lat(self):
-        """latitude and longitude are added to the objects header if they are not already contained. Row lengths are
-        subsequently corrected with empty floats.
-        """
-        for direction in ["latitude", "longitude"]:
-            if direction not in self.header:
-                self.header.append(direction)
-                for row in self.rows:
-                    row.append(0.0)
-        for row in self.rows:
-            # round long and latitude to 4 decimal palaces (11.1m) to reduce series cardinality and keep db performant.
-            # http://wiki.gis.com/wiki/index.php/Decimal_degrees
-            row[-1] = round(row[-1], 5)
-            row[-2] = round(row[-2], 5)
-
-    def get_s2_cell_token(self, long, lat):
-        """
-        The Geo package uses the S2 Geometry Library to represent geographic coordinates on a three-dimensional sphere.
-        The sphere is divided into cells, each with a unique 64-bit identifier (S2 cell ID).
-        Grid and S2 cell ID accuracy are defined by a level.
-
-        https://docs.influxdata.com/influxdb/cloud/query-data/flux/geo/shape-geo-data/#generate-s2-cell-id-tokens-language-specific-libraries
-        """
-        return s2sphere.CellId.from_lat_lng(s2sphere.LatLng(long, lat)).to_token()
-
-    def __next__(self):
+    def __iter__(self):
         """
         Implements the BaseSensorIterator API
 
@@ -56,14 +35,10 @@ class PlumeSensorIterator(BaseSensorIterator):
         remaining measurements, latitude and longitude are stored in non-indexed fields.
 
         """
-        if self._index >= len(self.rows):
-            self._index = 0
-            raise StopIteration()
-        row = self.rows[self._index]
-        fields = dict(zip(self.header[2:], row[2:]))
-        ret = self.Row(row[0], fields, {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(row[-1], row[-2])})
-        self._index += 1
-        return ret
+        for row in self.rows:
+            fields = dict(zip(self.header[2:], row[2:]))
+            yield self.Row(row[0], fields,
+                           {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(row[-1], row[-2])})
 
 
 class PlumeSensor(BaseSensor):
@@ -112,8 +87,8 @@ class PlumeSensor(BaseSensor):
             sensor.add_row(row)
         return sensor
 
-    def __iter__(self):
-        return PlumeSensorIterator(self.id, self.header, self.rows)
+    def get_writable(self):
+        return PlumeSensorWritable(self.id, self.header, self.rows)
 
 
 class PlumeWrapper(BaseWrapper):

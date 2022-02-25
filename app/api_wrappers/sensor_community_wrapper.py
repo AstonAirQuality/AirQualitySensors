@@ -1,3 +1,6 @@
+"""
+TODO: Implement Readable and Writable classes
+"""
 import csv
 import io
 import datetime as dt
@@ -13,8 +16,8 @@ from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
 class SCSensor(BaseSensor):
     """Per sensor object designed to wrap csv objects returned by the SensorCommunity archives."""
 
-    def __init__(self, id_, header=(), row=()):
-        super().__init__(id_, header, row)
+    def __init__(self, id_, header=(), rows=()):
+        super().__init__(id_, header, rows)
 
     @staticmethod
     def from_csv(sensor_id: str, csv_files: List[io.StringIO]) -> Any:
@@ -40,7 +43,7 @@ class SCSensor(BaseSensor):
             sensor.header.remove("sensor_type")
         return sensor
 
-    def __iter__(self):
+    def get_writable(self):
         pass
 
 

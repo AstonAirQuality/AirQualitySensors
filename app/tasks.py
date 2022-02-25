@@ -63,7 +63,7 @@ def write_plume_data_to_influx():
     ids = []
     for sensor in sensors:
         ids.append(sensor.id)
-        Influx.write("plume", sensor)
+        Influx.write("plume", sensor.get_writable())
     return ids
 
 

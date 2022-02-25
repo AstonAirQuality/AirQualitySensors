@@ -1,17 +1,33 @@
+import functools
 import itertools
 import os
 import datetime as dt
+import sys
 import timeit
 from collections import defaultdict
+from typing import Iterator
 
 from influxdb_client import InfluxDBClient, WriteOptions, Point, Dialect
 
-from api_wrappers.base_wrapper import BaseSensor
-from api_wrappers.plume_wrapper import PlumeSensor
+from api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
+from api_wrappers.plume_wrapper import PlumeSensorReadable
 from api_wrappers.sensor_community_wrapper import SCSensor
 from api_wrappers.zephyr_wrapper import ZephyrSensor
 
-BUCKET_MAPPINGS = {"plume": PlumeSensor, "zephyr": ZephyrSensor, "sensor_community": SCSensor}
+# TODO: added correct Readable classes to mapping
+BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensor, "sensor_community": SCSensor}
+
+
+def check_conflicts(func):
+    @functools.wraps(func)
+    def stub(self, *args, **kwargs):
+        # checks if function has active conflicts if so ignore call
+        for i in self._conflicts[func.__name__]:
+            if self._function_chain[i] is not None:
+                return self
+        return func(self, *args, **kwargs)
+
+    return stub
 
 
 class InfluxQueryBuilder:
@@ -19,18 +35,62 @@ class InfluxQueryBuilder:
     Maintains query structure and logical function (required by flux) order regardless of
     call order. e.g .filter().range() is converted to .range().filter() as range comes before
     filter in the flux language.
+
+    TODO: Remove at some point:
+
+    import "experimental/geo"
+
+    from(bucket: "plume")
+    |> range(start: 0)
+    |> filter(fn: (r) => r["_measurement"] == "air_quality")
+    |> geo.toRows()
+    |> geo.strictFilter(
+        region: {
+            lat: 52.48721619374425,
+            lon: -1.8883056239390839,
+            radius: 20.0
+        })
     """
 
     def __init__(self, bucket):
+        self.geo_temporal_query = False
         self.bucket = bucket
-        self.__function_chain = {"range": None, "filters": None}
+        self._conflicts = {"radius": ["polygon"],
+                           "polygon": ["radius"]}  # maintains an index of what functions conflict with each other
+        self._function_chain = {"range": None, "filters": None, "radius": None, "polygon": None}
         self.__fields = []
+
+    @check_conflicts
+    def polygon(self, points: list):
+        str_ = f"geo.toRows()\n" \
+               f"|> geo.strictFilter(" \
+               f"\n\tregion: {{" \
+               f"\n\tpoints: ["
+        for point in points:
+            str_ += f"\n\t\t{{lat: {point[0]}, lon: {point[1]}}},"
+        str_ = str_.rstrip(",")
+        str_ += f"\n\t]}})"
+        self._function_chain["radius"] = str_
+        self.geo_temporal_query = True
+        return self
+
+    @check_conflicts
+    def radius(self, lat, lon, radius):
+        self._function_chain["radius"] = f"geo.toRows()\n" \
+                                         f"|> geo.strictFilter(" \
+                                         f"\n\tregion: {{" \
+                                         f"\n\t\tlat: {lat}," \
+                                         f"\n\t\tlon: {lon}," \
+                                         f"\n\t\tradius: {radius}" \
+                                         f"\n\t}})"
+        self.geo_temporal_query = True
+        return self
 
     def range(self, start="0", stop=None):
         if stop is None:
-            self.__function_chain["range"] = f"range(start: {start})"
+            self._function_chain["range"] = f"range(start: {start})"
         else:
-            self.__function_chain["range"] = f"range(start: {start}, stop: {stop})"
+            self._function_chain["range"] = f"range(start: {start}, stop: {stop})"
         return self
 
     def filter(self, expression, param_name="r"):
@@ -42,10 +102,10 @@ class InfluxQueryBuilder:
             Instance of self
         """
         query_string = f"filter(fn: ({param_name}) => {expression})"
-        if self.__function_chain["filters"] is None:
-            self.__function_chain["filters"] = [query_string]
+        if self._function_chain["filters"] is None:
+            self._function_chain["filters"] = [query_string]
         else:
-            self.__function_chain["filters"].append(query_string)
+            self._function_chain["filters"].append(query_string)
         return self
 
     def field(self, field):
@@ -56,12 +116,12 @@ class InfluxQueryBuilder:
         self.__fields.append(f'r["_field"] == "{field}"')
         return self
 
-    def asset(self, asset):
+    def measurement(self, measurement):
         """Call measurement before field
         Returns:
             Instance of self
         """
-        self.filter(f'r["_measurement"] == "{asset}"')
+        self.filter(f'r["_measurement"] == "{measurement}"')
         return self
 
     def build(self):
@@ -71,8 +131,8 @@ class InfluxQueryBuilder:
         """
         if self.__fields:
             self.filter(" or ".join(self.__fields))
-        query = f"from(bucket: \"{self.bucket}\")"
-        for k, v in self.__function_chain.items():
+        query = f"import \"experimental/geo\"\n\nfrom(bucket: \"{self.bucket}\")"
+        for k, v in self._function_chain.items():
             if v is not None:
                 if type(v) is list:
                     for item in v:
@@ -102,7 +162,7 @@ class Table:
         self.data = defaultdict(list)  # {"timestamp": [{"measurement": "AMU", "field": "mean", "value": "01"}, ...]}
         self.corrected = False
 
-    def insert(self, timestamp: str, measurement: str, field: str, value: float, sensor_id: int):
+    def insert(self, timestamp: str, measurement: str, field: str, value: float):
         """
         Insert entry into table. The entry is inserted into the internal index and data structure.
         If the table has already been built all subsequent inserts are ignored.
@@ -160,11 +220,11 @@ class Influx:
         return InfluxDBClient(url=url, org=org, token=token)
 
     @staticmethod
-    def write(bucket: str, sensor_data: BaseSensor, measurement="air_quality", client=None):
+    def write(bucket: str, writable: BaseSensorWritable, measurement="air_quality", client=None):
         # select static client if no client is specified by the user, helps with testability
         writer = (Influx.get_client() if client is None else client).write_api(
             write_options=WriteOptions(batch_size=50_000, flush_interval=10_000))
-        for entry in sensor_data:
+        for entry in writable:
             # TODO: Find out why Influx does not insert correctly with UNIX timestamp
             record_ = Point(measurement).time(dt.datetime.fromtimestamp(entry.timestamp))
             # add fields to record
@@ -178,7 +238,28 @@ class Influx:
         writer.close()
 
     @staticmethod
-    def read(query: InfluxQueryBuilder, client=None):
+    def __geo_temporal_read(query, reader) -> Iterator[BaseSensorReadable]:
+        """Geo temporal data is returned differently than standard reads and is processed accordingly.
+        """
+        start = timeit.default_timer()
+        csv_buffer = list(reader.query_csv(query.build(), dialect=Dialect()))
+        end = timeit.default_timer()
+        aggregator = defaultdict(list)
+        print(f"DB READ TIME {end - start}s")
+        header = csv_buffer[0]
+        for line in itertools.islice(csv_buffer, 1, None):
+            dict_ = dict(zip(header, line))
+            try:
+                sensor_id = int(dict_["sensor_id"])
+            except KeyError:
+                continue
+            aggregator[sensor_id].append(dict_.values())
+        for sensor_id, v in aggregator.items():
+            sen = BUCKET_MAPPINGS[query.bucket](sensor_id, header, v)
+            yield sen
+
+    @staticmethod
+    def read(query: InfluxQueryBuilder, client=None) -> Iterator[BaseSensorReadable]:
         """Send query to db through client and return tabulated output
         Args:
             query: FluxQL query to send to database
@@ -190,6 +271,10 @@ class Influx:
         """
         # select static client if no client is specified by the user, helps with testability
         reader = (Influx.get_client() if client is None else client).query_api()
+        if query.geo_temporal_query:
+            yield from Influx.__geo_temporal_read(query, reader)
+            return
+
         start = timeit.default_timer()
         csv_buffer = list(reader.query_csv(query.build(), dialect=Dialect()))
         end = timeit.default_timer()
@@ -210,12 +295,14 @@ class Influx:
             except ValueError:
                 aggregator[sensor_id].append([dict_["_time"], dict_["_measurement"], dict_["_field"],
                                               dict_["_value"]])
+            except KeyError:
+                print(dict_, file=sys.stderr)
         for sensor_id, v in aggregator.items():
             table = Table()
             for i in v:
-                table.insert(*i, sensor_id)
+                table.insert(*i)
             table = table.build()
-            sensor: BaseSensor = BUCKET_MAPPINGS[query.bucket](sensor_id, table.keys(), [])
+            sensor: BaseSensorReadable = BUCKET_MAPPINGS[query.bucket](sensor_id, table.keys(), [])
             for entry in table.values():
                 for i in entry:
                     # append to internal data structure and skip extra processing

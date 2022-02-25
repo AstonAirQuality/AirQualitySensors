@@ -6,6 +6,7 @@ from typing import Iterable, Union
 import datetime as dt
 
 import pandas as pd
+import s2sphere
 
 
 def correct_timestamp(func):
@@ -24,7 +25,20 @@ def correct_timestamp(func):
     return stub
 
 
-class BaseSensorIterator:
+class BaseSensorReadable:
+    """Returned by the influxdb reader
+    """
+
+    def __init__(self, id_, header, rows):
+        self.id = id_
+        self.header = header
+        self.rows = rows
+
+    def __repr__(self):
+        return f"{self.id} | Headers {self.header} | Row count: {len(self.rows)}"
+
+
+class BaseSensorWritable:
     """Creates an influxdb compatible named tuple for each row in the sensor object
     """
     Row = namedtuple("Row", "timestamp fields tags")
@@ -33,14 +47,42 @@ class BaseSensorIterator:
         self.id = id_
         self.header = header
         self.rows = rows
-        self._index = 0
 
     @abc.abstractmethod
-    def __next__(self):
+    def __iter__(self):
         """
-        :return: namedtuple(timestamp=timestamp, fields={...}, tags={...})
+        :yield: namedtuple(timestamp=timestamp, fields={...}, tags={...})
         """
         ...
+
+    def correct_long_lat(self):
+        """latitude and longitude are added to the objects header if they are not already contained. Row lengths are
+        subsequently corrected with empty floats.
+        """
+        for direction in ["latitude", "longitude"]:
+            if direction not in self.header:
+                # shorten to lat, lon
+                self.header.append(direction[:3])
+                for row in self.rows:
+                    row.append(0.0)
+            else:
+                # replace with lat, lon
+                self.header = [i.replace(direction, direction[:3]) for i in self.header]
+        for row in self.rows:
+            # round long and latitude to 4 decimal palaces (11.1m) to reduce series cardinality and keep db performant.
+            # http://wiki.gis.com/wiki/index.php/Decimal_degrees
+            row[-1] = round(row[-1], 5)
+            row[-2] = round(row[-2], 5)
+
+    def get_s2_cell_token(self, long, lat):
+        """
+        The Geo package uses the S2 Geometry Library to represent geographic coordinates on a three-dimensional sphere.
+        The sphere is divided into cells, each with a unique 64-bit identifier (S2 cell ID).
+        Grid and S2 cell ID accuracy are defined by a level.
+
+        https://docs.influxdata.com/influxdb/cloud/query-data/flux/geo/shape-geo-data/#generate-s2-cell-id-tokens-language-specific-libraries
+        """
+        return s2sphere.CellId.from_lat_lng(s2sphere.LatLng(long, lat)).to_token()
 
 
 class BaseSensor:
@@ -48,10 +90,10 @@ class BaseSensor:
     Base class for sensor objects
     """
 
-    def __init__(self, id_, header, row):
+    def __init__(self, id_, header, rows):
         self.id = id_
         self.header = header
-        self.rows = list(row)
+        self.rows = list(rows)
 
     def add_row(self, row: Iterable):
         """Normalise and append row to internal list.
@@ -59,22 +101,8 @@ class BaseSensor:
         Coverts all digits to int objects, all elements are initially converted to strings before
         digit check to avoid type errors.
 
-        TODO: Move normalisation to subclasses
-
         :param row: row to add to plume sensor
         """
-        # final_row = []
-        # for entry in row:
-        #     i = str(entry)
-        #     if i.isdigit():
-        #         final_row.append(int(i))
-        #     else:
-        #         try:
-        #             final_row.append(float(i))
-        #         except ValueError:
-        #             # append to original entry type
-        #             final_row.append(entry)
-        # self.rows.append(final_row)
         self.rows.append(row)
 
     @property
@@ -84,7 +112,7 @@ class BaseSensor:
         return pd.DataFrame(self.rows, columns=self.header)
 
     @abc.abstractmethod
-    def __iter__(self):
+    def get_writable(self):
         ...
 
     def __repr__(self):

@@ -23,6 +23,7 @@ def zephyr_test():
                              slot="B")
     for sensor in sensors:
         print(sensor.id)
+        print(sensor.header)
         print(sensor.dataframe)
 
 
@@ -46,6 +47,6 @@ def plume_test(start, end):
 
 if __name__ == '__main__':
     # sensor_community_test()
-    # zephyr_test()
+    zephyr_test()
     # plume_test(datetime.datetime.now() - datetime.timedelta(2), datetime.datetime.now() - datetime.timedelta(1))
-    plume_test(datetime.datetime(2022, 1, 1), datetime.datetime(2022, 1, 31))
+    # plume_test(datetime.datetime(2022, 1, 1), datetime.datetime(2022, 1, 31))
