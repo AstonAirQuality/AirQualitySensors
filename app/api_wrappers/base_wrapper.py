@@ -32,7 +32,7 @@ class BaseSensorReadable:
     def __init__(self, id_, header, rows):
         self.id = id_
         self.header = header
-        self.rows = rows
+        self.rows = list(rows)
 
     def __repr__(self):
         return f"{self.id} | Headers {self.header} | Row count: {len(self.rows)}"
@@ -55,8 +55,24 @@ class BaseSensorWritable:
         """
         ...
 
-    def correct_long_lat(self):
-        """latitude and longitude are added to the objects header if they are not already contained. Row lengths are
+    def round_long_lat_in_fields(self, fields: dict, accuracy: int = 5) -> dict:
+        """rounds lat and lon in fields before committing to the database.
+
+        To be called after self.correct_long_lat_in_header
+
+        TODO: round to 5 decimal places.
+        round long and latitude to 4 decimal palaces (11.1m) to reduce series cardinality and keep db performant.
+        http://wiki.gis.com/wiki/index.php/Decimal_degrees
+        """
+        for direction in ["lat", "lon"]:
+            if fields[direction] is not None:
+                fields[direction] = round(fields[direction], accuracy)
+            else:
+                fields[direction] = 0.0  # if lat or lon is None, change to 0.0 to keep db from crashing on geo reads
+        return fields
+
+    def correct_long_lat_in_header(self):
+        """latitude and longitude are added to the objects' header if they are not already contained. Row lengths are
         subsequently corrected with empty floats.
         """
         for direction in ["latitude", "longitude"]:
@@ -68,13 +84,8 @@ class BaseSensorWritable:
             else:
                 # replace with lat, lon
                 self.header = [i.replace(direction, direction[:3]) for i in self.header]
-        for row in self.rows:
-            # round long and latitude to 4 decimal palaces (11.1m) to reduce series cardinality and keep db performant.
-            # http://wiki.gis.com/wiki/index.php/Decimal_degrees
-            row[-1] = round(row[-1], 5)
-            row[-2] = round(row[-2], 5)
 
-    def get_s2_cell_token(self, long, lat):
+    def get_s2_cell_token(self, lon: int, lat: int):
         """
         The Geo package uses the S2 Geometry Library to represent geographic coordinates on a three-dimensional sphere.
         The sphere is divided into cells, each with a unique 64-bit identifier (S2 cell ID).
@@ -82,7 +93,7 @@ class BaseSensorWritable:
 
         https://docs.influxdata.com/influxdb/cloud/query-data/flux/geo/shape-geo-data/#generate-s2-cell-id-tokens-language-specific-libraries
         """
-        return s2sphere.CellId.from_lat_lng(s2sphere.LatLng(long, lat)).to_token()
+        return s2sphere.CellId.from_lat_lng(s2sphere.LatLng(lon, lat)).to_token()
 
 
 class BaseSensor:

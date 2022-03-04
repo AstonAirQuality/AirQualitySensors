@@ -6,9 +6,33 @@ import itertools
 import json
 from typing import Any, Iterator, Union
 
+import pandas
 import requests
 
-from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
+from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp, BaseSensorWritable, BaseSensorReadable
+
+
+class ZephyrSensorReadable(BaseSensorReadable):
+    def __init__(self, id_, header, rows):
+        super().__init__(id_, header, rows)
+
+
+class ZephyrSensorWritable(BaseSensorWritable):
+
+    def __init__(self, id_, header, rows):
+        super().__init__(id_, header, rows)
+        self.correct_long_lat_in_header()
+
+    def __iter__(self):
+        """
+        {'NO': 0, 'NO2': 10, 'O3': 0, 'ambHumidity': 51, 'ambPressure': 100478, 'ambTempC': 20, 'dateTime': '2021-09-19T23:55:55+00:00', 'humidity': 51, 'latitude': None, 'longitude': None, 'particulatePM1': 1, 'particulatePM10': 9, 'particulatePM25': 9, 'tempC': 21}
+        """
+        for row in self.rows:
+            fields = self.round_long_lat_in_fields(dict(zip(self.header, row)))
+            datetime = pandas.to_datetime(fields["dateTime"]).timestamp()
+            fields.pop("dateTime", None)
+            yield self.Row(datetime, fields,
+                           {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(fields["lon"], fields["lat"])})
 
 
 class ZephyrSensor(BaseSensor):
@@ -33,7 +57,7 @@ class ZephyrSensor(BaseSensor):
         return zs
 
     def get_writable(self):
-        pass
+        return ZephyrSensorWritable(self.id, self.header, self.rows)
 
 
 class ZephyrWrapper(BaseWrapper):

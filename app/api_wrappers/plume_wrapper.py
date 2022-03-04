@@ -25,7 +25,7 @@ class PlumeSensorWritable(BaseSensorWritable):
 
     def __init__(self, sensor_id, header, rows):
         super().__init__(sensor_id, header, rows)
-        self.correct_long_lat()
+        self.correct_long_lat_in_header()
 
     def __iter__(self):
         """
@@ -38,7 +38,7 @@ class PlumeSensorWritable(BaseSensorWritable):
         for row in self.rows:
             fields = dict(zip(self.header[2:], row[2:]))
             yield self.Row(row[0], fields,
-                           {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(row[-1], row[-2])})
+                           {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(fields["lon"], fields["lat"])})
 
 
 class PlumeSensor(BaseSensor):

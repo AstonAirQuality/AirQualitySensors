@@ -9,13 +9,13 @@ from typing import Iterator
 
 from influxdb_client import InfluxDBClient, WriteOptions, Point, Dialect
 
-from api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
-from api_wrappers.plume_wrapper import PlumeSensorReadable
-from api_wrappers.sensor_community_wrapper import SCSensor
-from api_wrappers.zephyr_wrapper import ZephyrSensor
+from app.api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
+from app.api_wrappers.plume_wrapper import PlumeSensorReadable
+from app.api_wrappers.sensor_community_wrapper import SCSensor
+from app.api_wrappers.zephyr_wrapper import ZephyrSensorReadable
 
 # TODO: added correct Readable classes to mapping
-BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensor, "sensor_community": SCSensor}
+BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensorReadable, "sensor_community": SCSensor}
 
 
 def check_conflicts(func):
@@ -35,21 +35,6 @@ class InfluxQueryBuilder:
     Maintains query structure and logical function (required by flux) order regardless of
     call order. e.g .filter().range() is converted to .range().filter() as range comes before
     filter in the flux language.
-
-    TODO: Remove at some point:
-
-    import "experimental/geo"
-
-    from(bucket: "plume")
-    |> range(start: 0)
-    |> filter(fn: (r) => r["_measurement"] == "air_quality")
-    |> geo.toRows()
-    |> geo.strictFilter(
-        region: {
-            lat: 52.48721619374425,
-            lon: -1.8883056239390839,
-            radius: 20.0
-        })
     """
 
     def __init__(self, bucket):
@@ -156,7 +141,7 @@ class Table:
     """
 
     def __init__(self):
-        self.asset = None
+        self.measurement = None
         self.fields = set()
         self.index = defaultdict(list)  # {"timestamp": [field0, field1, fieldN, ...]}
         self.data = defaultdict(list)  # {"timestamp": [{"measurement": "AMU", "field": "mean", "value": "01"}, ...]}
@@ -169,8 +154,8 @@ class Table:
         """
         if self.corrected:
             return
-        if self.asset is None:
-            self.asset = measurement
+        if self.measurement is None:
+            self.measurement = measurement
         self.data[timestamp].append({"field": field, "value": value})
         self.index[timestamp].append(field)
         self.fields.add(field)
@@ -206,7 +191,7 @@ class Table:
         for k, v in self.data.items():
             # base["timestamp"].append(pandas.to_datetime(k))
             base["timestamp"].append(k)
-            base["measurement"].append(self.asset)
+            base["measurement"].append(self.measurement)
             for i in v:
                 base[i["field"]].append(i["value"])
         return dict(base)
@@ -253,7 +238,7 @@ class Influx:
                 sensor_id = int(dict_["sensor_id"])
             except KeyError:
                 continue
-            aggregator[sensor_id].append(dict_.values())
+            aggregator[sensor_id].append(list(dict_.values()))
         for sensor_id, v in aggregator.items():
             sen = BUCKET_MAPPINGS[query.bucket](sensor_id, header, v)
             yield sen
@@ -284,11 +269,15 @@ class Influx:
         headers = csv_buffer[0]
         aggregator = defaultdict(list)
         for line in itertools.islice(csv_buffer, 1, None):
+            if line in (headers, []):
+                continue
             dict_ = dict(zip(headers, line))
             try:
                 sensor_id = int(dict_["sensor_id"])
             except KeyError:
                 continue
+            except ValueError:
+                sensor_id = dict_["sensor_id"]
             try:
                 aggregator[sensor_id].append([dict_["_time"], dict_["_measurement"], dict_["_field"],
                                               float(dict_["_value"])])
@@ -302,9 +291,7 @@ class Influx:
             for i in v:
                 table.insert(*i)
             table = table.build()
-            sensor: BaseSensorReadable = BUCKET_MAPPINGS[query.bucket](sensor_id, table.keys(), [])
-            for entry in table.values():
-                for i in entry:
-                    # append to internal data structure and skip extra processing
-                    sensor.rows.append(i)
+            sensor: BaseSensorReadable = BUCKET_MAPPINGS[query.bucket](sensor_id, list(table.keys()), [])
+            for entry in zip(*table.values()):
+                sensor.rows.append(entry)
             yield sensor

@@ -23,7 +23,6 @@ def zephyr_test():
                              slot="B")
     for sensor in sensors:
         print(sensor.id)
-        print(sensor.header)
         print(sensor.dataframe)
 
 
