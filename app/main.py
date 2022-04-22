@@ -4,16 +4,16 @@ API end point
 from fastapi import FastAPI, Form
 from celery.result import AsyncResult
 
-from tasks import get_plume_data, get_zephyr_data, get_sensor_community_data, write_plume_data_to_influx
+from tasks import read_plume_data, read_zephyr_data, read_sensor_community_data
 
 app = FastAPI()
-func_map = {"plume": get_plume_data,
-            "zephyr": get_zephyr_data,
-            "sensor_community": get_sensor_community_data}
+func_map = {"plume": read_plume_data,
+            "zephyr": read_zephyr_data,
+            "sensor_community": read_sensor_community_data}
 
 
-@app.route("/")
-async def landing(*args, **kwargs):
+@app.get("/")
+async def landing():
     return "Aston Air Quality API Endpoint"
 
 
@@ -34,9 +34,3 @@ def get_result(task_id: str):
         "task_status": res.status,
         "task_result": res.result
     }
-
-
-@app.post("/api/tasks/database/update")
-def update_influx_db():
-    task = write_plume_data_to_influx.delay()
-    return {"task_id": task.id}

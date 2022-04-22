@@ -1,4 +1,6 @@
+import copy
 import datetime
+import random
 
 from influxdb_client import InfluxDBClient
 
@@ -23,21 +25,38 @@ PLUME_PASSWORD = "aston1234"
 
 def write_plume_to_influx():
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    for i in range(1, 12, 2):
-        sensors = pw.get_sensors(start=datetime.datetime(2021, i, 1),
-                                 end=datetime.datetime(2021, i + 1, 1),
-                                 sensors=pw.get_sensor_ids())
-        for sensor in sensors:
-            Influx.write("plume", sensor.get_writable(), client=client)
+    sensors = pw.get_sensors(start=datetime.datetime(2020, 1, 1),
+                             end=datetime.datetime(2022, 1, 1),
+                             sensors=pw.get_sensor_ids())
+    for sensor in sensors:
+        Influx.write("plume", sensor.get_writable(), client=client)
+
+
+def simulate_60_plume_sensors():
+    pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
+    sensors = pw.get_sensors(start=datetime.datetime(2020, 1, 1),
+                             end=datetime.datetime(2022, 1, 1),
+                             sensors=pw.get_sensor_ids())
+    choices = list(sensors)
+    duplicates = []
+    for i in range(60 - len(choices)):
+        duplicate = copy.deepcopy(random.Random().choice(choices))
+        duplicate.id += i  # modify the id
+        duplicates.append(duplicate)
+
+    len(duplicates)
+    for sensor in duplicates:
+        Influx.write("plume", sensor.get_writable(), client=client)
 
 
 def write_zephyr_to_influx():
     zw = ZephyrWrapper(ZEPHYR_USERNAME, ZEPHYR_PASSWORD)
-    sensors = zw.get_sensors(start=datetime.datetime(2021, 9, 19),
-                             end=datetime.datetime(2021, 9, 20),
+    sensors = zw.get_sensors(start=datetime.datetime(2020, 1, 1),
+                             end=datetime.datetime(2022, 1, 1),
                              sensors=zw.get_sensor_ids(),
                              slot="B")
     for sensor in sensors:
+        print(sensor.id)
         Influx.write("zephyr", sensor.get_writable(), client=client)
 
 
@@ -77,9 +96,7 @@ def find_entries_in_polygon():
 
 
 if __name__ == '__main__':
-    read_zephyr_from_influx()
-    # find_entries_in_radius()
+    print("plume")
+    write_plume_to_influx()
+    # print("zephyr")
     # write_zephyr_to_influx()
-    # write_plume_to_influx()
-    # find_entries_in_polygon()
-    read_plume_from_influx()

@@ -37,6 +37,9 @@ class BaseSensorReadable:
     def __repr__(self):
         return f"{self.id} | Headers {self.header} | Row count: {len(self.rows)}"
 
+    def to_json(self):
+        return {"sensor_id": self.id, "header": self.header, "rows": self.rows}
+
 
 class BaseSensorWritable:
     """Creates an influxdb compatible named tuple for each row in the sensor object

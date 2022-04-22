@@ -10,7 +10,22 @@ import bs4
 import lxml.html as lh
 import requests
 
-from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp
+from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp, BaseSensorWritable, BaseSensorReadable
+
+
+class SCSensorReadable(BaseSensorReadable):
+    def __init__(self, id_, header, rows):
+        super().__init__(id_, header, rows)
+
+
+class SCSensorWritable(BaseSensorWritable):
+
+    def __iter__(self):
+        return self.rows.__iter__()
+
+    def __init__(self, id_, header, rows):
+        super().__init__(id_, header, rows)
+        self.correct_long_lat_in_header()
 
 
 class SCSensor(BaseSensor):
@@ -44,7 +59,7 @@ class SCSensor(BaseSensor):
         return sensor
 
     def get_writable(self):
-        pass
+        return SCSensorWritable(self.id, self.header, self.rows)
 
 
 class SCWrapper(BaseWrapper):

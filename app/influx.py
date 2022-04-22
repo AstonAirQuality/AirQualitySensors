@@ -9,13 +9,13 @@ from typing import Iterator
 
 from influxdb_client import InfluxDBClient, WriteOptions, Point, Dialect
 
-from app.api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
-from app.api_wrappers.plume_wrapper import PlumeSensorReadable
-from app.api_wrappers.sensor_community_wrapper import SCSensor
-from app.api_wrappers.zephyr_wrapper import ZephyrSensorReadable
+# TODO: add . to front of imports when running tests
+from api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
+from api_wrappers.plume_wrapper import PlumeSensorReadable
+from api_wrappers.sensor_community_wrapper import SCSensorReadable
+from api_wrappers.zephyr_wrapper import ZephyrSensorReadable
 
-# TODO: added correct Readable classes to mapping
-BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensorReadable, "sensor_community": SCSensor}
+BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensorReadable, "sensor_community": SCSensorReadable}
 
 
 def check_conflicts(func):
@@ -73,9 +73,9 @@ class InfluxQueryBuilder:
 
     def range(self, start="0", stop=None):
         if stop is None:
-            self._function_chain["range"] = f"range(start: {start})"
+            self._function_chain["range"] = f"range(start: {int(start)})"
         else:
-            self._function_chain["range"] = f"range(start: {start}, stop: {stop})"
+            self._function_chain["range"] = f"range(start: {int(start)}, stop: {int(stop)})"
         return self
 
     def filter(self, expression, param_name="r"):
@@ -129,7 +129,6 @@ class InfluxQueryBuilder:
 
 class Table:
     """
-    TODO: Migrate to a filtered base sensor object
     Builds and corrects data to allow for easy insertion into a dataframe. Assumes all data inserted must be of the
     measurement.
         Typical usage example:
@@ -223,11 +222,11 @@ class Influx:
         writer.close()
 
     @staticmethod
-    def __geo_temporal_read(query, reader) -> Iterator[BaseSensorReadable]:
+    def __geo_temporal_read(query: InfluxQueryBuilder, reader) -> Iterator[BaseSensorReadable]:
         """Geo temporal data is returned differently than standard reads and is processed accordingly.
         """
         start = timeit.default_timer()
-        csv_buffer = list(reader.query_csv(query.build(), dialect=Dialect()))
+        csv_buffer = list(reader.query_csv(query.build(), diainlect=Dialect()))
         end = timeit.default_timer()
         aggregator = defaultdict(list)
         print(f"DB READ TIME {end - start}s")
@@ -295,3 +294,4 @@ class Influx:
             for entry in zip(*table.values()):
                 sensor.rows.append(entry)
             yield sensor
+

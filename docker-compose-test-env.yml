@@ -4,8 +4,8 @@ services:
     container_name: web-server
     build: ./app
     ports:
-      - 8000:8000
-    command: gunicorn --workers=5 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 main:app
+      - "8000:8000"
+    command: gunicorn --log-level debug --workers=5 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 main:app
     volumes:
       - ./app:/app
     environment:

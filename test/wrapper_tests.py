@@ -22,8 +22,10 @@ def zephyr_test():
                              sensors=zw.get_sensor_ids(),
                              slot="B")
     for sensor in sensors:
-        print(sensor.id)
-        print(sensor.dataframe)
+        for i in sensor.get_writable():
+            print(i)
+        # print(sensor.id)
+        # print(sensor.dataframe)
 
 
 def sensor_community_test():
