@@ -9,8 +9,7 @@ class WebUser(HttpUser):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.sensors = ["plume", "zephyr", "sensor_community"]
-        self.sensors = ["plume"]
+        self.sensors = ["plume", "zephyr", "sensor_community"]
 
     def on_start(self):
         ...
@@ -19,7 +18,7 @@ class WebUser(HttpUser):
     def test_task(self):
         """
         Randomly pick a sensor and time range between 01/2020 - 01/2022, submit task to server, check every send for
-        task status, upon SUCCESS return else time out after 20 seconds and count the request as failed.
+        task status, upon SUCCESS return, else time out after 20 seconds and move onto another request.
         """
         lower = 1640995200  # 01/2022
         upper = 1577836800  # 01/2021

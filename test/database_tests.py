@@ -1,6 +1,4 @@
-import copy
 import datetime
-import random
 
 from influxdb_client import InfluxDBClient
 
@@ -29,23 +27,6 @@ def write_plume_to_influx():
                              end=datetime.datetime(2022, 1, 1),
                              sensors=pw.get_sensor_ids())
     for sensor in sensors:
-        Influx.write("plume", sensor.get_writable(), client=client)
-
-
-def simulate_60_plume_sensors():
-    pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sensors = pw.get_sensors(start=datetime.datetime(2020, 1, 1),
-                             end=datetime.datetime(2022, 1, 1),
-                             sensors=pw.get_sensor_ids())
-    choices = list(sensors)
-    duplicates = []
-    for i in range(60 - len(choices)):
-        duplicate = copy.deepcopy(random.Random().choice(choices))
-        duplicate.id += i  # modify the id
-        duplicates.append(duplicate)
-
-    len(duplicates)
-    for sensor in duplicates:
         Influx.write("plume", sensor.get_writable(), client=client)
 
 
