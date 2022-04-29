@@ -10,10 +10,10 @@ from typing import Iterator
 from influxdb_client import InfluxDBClient, WriteOptions, Point, Dialect
 
 # TODO: add . to front of imports when running tests
-from api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
-from api_wrappers.plume_wrapper import PlumeSensorReadable
-from api_wrappers.sensor_community_wrapper import SCSensorReadable
-from api_wrappers.zephyr_wrapper import ZephyrSensorReadable
+from .api_wrappers.base_wrapper import BaseSensorWritable, BaseSensorReadable
+from .api_wrappers.plume_wrapper import PlumeSensorReadable
+from .api_wrappers.sensor_community_wrapper import SCSensorReadable
+from .api_wrappers.zephyr_wrapper import ZephyrSensorReadable
 
 BUCKET_MAPPINGS = {"plume": PlumeSensorReadable, "zephyr": ZephyrSensorReadable, "sensor_community": SCSensorReadable}
 

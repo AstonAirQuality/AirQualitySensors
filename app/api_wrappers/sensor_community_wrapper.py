@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Iterator, Tuple, Union
 
 import bs4
 import lxml.html as lh
+import pandas
 import requests
 
 from .base_wrapper import BaseSensor, BaseWrapper, correct_timestamp, BaseSensorWritable, BaseSensorReadable
@@ -19,13 +20,34 @@ class SCSensorReadable(BaseSensorReadable):
 
 
 class SCSensorWritable(BaseSensorWritable):
-
-    def __iter__(self):
-        return self.rows.__iter__()
+    """
+    header: ['location', 'lat', 'lon', 'timestamp', 'P1', 'durP1', 'ratioP1', 'P2', 'durP2', 'ratioP2']
+    row: ['52778', '52.48606680', '-1.88999630', '2021-10-18T13:27:08', '2.78', '', '', '2.35', '', '']
+    """
 
     def __init__(self, id_, header, rows):
         super().__init__(id_, header, rows)
-        self.correct_long_lat_in_header()
+
+    def __iter__(self):
+        for row in self.rows:
+            fields = {k: SCSensorWritable.correct_type(v) for k, v in
+                      self.round_long_lat_in_fields(dict(zip(self.header, row))).items()}
+            timestamp = pandas.to_datetime(fields.pop("timestamp")).timestamp()
+            yield self.Row(timestamp, fields, {"sensor_id": self.id,
+                                               "s2_cell_id": self.get_s2_cell_token(fields["lon"], fields["lat"])})
+
+    @staticmethod
+    def correct_type(obj):
+        """Corrects string types to either float or int
+        """
+        obj = str(obj)
+        try:
+            return int(obj)
+        except ValueError:
+            try:
+                return float(obj)
+            except ValueError:
+                return obj
 
 
 class SCSensor(BaseSensor):

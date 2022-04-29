@@ -22,10 +22,8 @@ def zephyr_test():
                              sensors=zw.get_sensor_ids(),
                              slot="B")
     for sensor in sensors:
-        for i in sensor.get_writable():
-            print(i)
-        # print(sensor.id)
-        # print(sensor.dataframe)
+        print(sensor.id)
+        print(sensor.dataframe)
 
 
 def sensor_community_test():
@@ -33,7 +31,6 @@ def sensor_community_test():
     sensors = scw.get_sensors(end=datetime.datetime.today() - datetime.timedelta(days=1),
                               start=datetime.datetime(2021, 10, 18),
                               sensors={'66007': 'SDS011', '66008': 'SHT31'})
-
     for sensor in sensors:
         print(sensor.id)
         print(sensor.dataframe)
@@ -41,13 +38,14 @@ def sensor_community_test():
 
 def plume_test(start, end):
     pw = PlumeWrapper(PLUME_EMAIL, PLUME_PASSWORD, 85)
-    sensors = pw.get_sensors(start=start, end=end, sensors=pw.get_sensor_ids(), timeout=300)
+    sensors = pw.get_sensors(start=start, end=end, sensors=pw.get_sensor_ids(), timeout=120)
     for sensor in sensors:
         print(sensor.id)
+        print(sensor.dataframe)
 
 
 if __name__ == '__main__':
     # sensor_community_test()
-    zephyr_test()
+    # zephyr_test()
     # plume_test(datetime.datetime.now() - datetime.timedelta(2), datetime.datetime.now() - datetime.timedelta(1))
-    # plume_test(datetime.datetime(2022, 1, 1), datetime.datetime(2022, 1, 31))
+    plume_test(datetime.datetime(2021, 1, 1), datetime.datetime(2022, 1, 1))

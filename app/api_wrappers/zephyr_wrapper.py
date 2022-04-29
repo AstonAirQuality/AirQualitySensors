@@ -29,8 +29,7 @@ class ZephyrSensorWritable(BaseSensorWritable):
         """
         for row in self.rows:
             fields = self.round_long_lat_in_fields(dict(zip(self.header, row)))
-            datetime = pandas.to_datetime(fields["dateTime"]).timestamp()
-            fields.pop("dateTime", None)
+            datetime = pandas.to_datetime(fields.pop("dateTime")).timestamp()
             yield self.Row(datetime, fields,
                            {"sensor_id": self.id, "s2_cell_id": self.get_s2_cell_token(fields["lon"], fields["lat"])})
 

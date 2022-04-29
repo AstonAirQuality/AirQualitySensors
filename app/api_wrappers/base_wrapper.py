@@ -69,7 +69,8 @@ class BaseSensorWritable:
         """
         for direction in ["lat", "lon"]:
             if fields[direction] is not None:
-                fields[direction] = round(fields[direction], accuracy)
+                # convert to float incase external API returns a string
+                fields[direction] = round(float(fields[direction]), accuracy)
             else:
                 fields[direction] = 0.0  # if lat or lon is None, change to 0.0 to keep db from crashing on geo reads
         return fields
