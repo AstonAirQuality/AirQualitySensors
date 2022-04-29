@@ -32,4 +32,4 @@
 
 ## Architecture
 
-![architecture](/docs/desgin.png)
+![architecture](./docs/desgin.png)
