@@ -29,3 +29,7 @@
 
 - Flower monitoring server available on ```http://0.0.0.0:8888```
 - Influx DB available on ```http://0.0.0.0:8086```
+
+## Architecture
+
+![architecture](/docs/desgin.png)
