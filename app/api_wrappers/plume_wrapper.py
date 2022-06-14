@@ -1,6 +1,7 @@
 import csv
 import datetime as dt
 import json
+import os
 import pathlib
 import time
 import io
@@ -100,6 +101,10 @@ class PlumeWrapper(BaseWrapper):
         self.org = str(org_number)
         self.__session = self.__login(email, password)
 
+    @staticmethod
+    def env_factory():
+        return PlumeWrapper(os.environ.get("PLUME_EMAIL"), os.environ.get("PLUME_PASSWORD"), 85)
+
     def __login(self, email, password) -> requests.Session:
         """Logs into the Plume API
 
@@ -135,13 +140,29 @@ class PlumeWrapper(BaseWrapper):
         return self.__session.get(
             f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}").json()["export_tasks"]
 
+    def __request_json_sensors(self):
+        return self.__session.get(
+            f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").json()
+
+    def check_last_sync(self, days: int = 3) -> Iterator[tuple]:
+        """Returns a list of all sensors with sync status.
+
+        Return is in the following structure (sensor_id, True or False or None) where True represents a synced sensor,
+        False represents an un-synced sensor and None is when no last synced time is available.
+
+        :param days: Number of days until the sensor is considered un-synced
+        :return: generator of tuples
+        """
+        sensors = self.__request_json_sensors()["sensors"]
+        for sensor in sensors:
+            last_sync, id_ = sensor["last_sync"], sensor["device_id"]
+            if last_sync is None:
+                yield id_, None
+                continue
+            yield id_, (dt.datetime.now() - dt.datetime.fromtimestamp(last_sync)).days < days
+
     def get_sensor_ids(self) -> Iterable[str]:
-        try:
-            json_ = self.__session.get(
-                f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").json()
-        except json.JSONDecodeError:
-            return []
-        return [sensor["id"] for sensor in json_["sensors"]]
+        return [sensor["id"] for sensor in self.__request_json_sensors()["sensors"]]
 
     def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
                           timeout) -> str:
@@ -205,3 +226,13 @@ class PlumeWrapper(BaseWrapper):
         """
         for sensor, buffer in self.extract_zip(self.get_zip_file_link(sensors, start, end, timeout)):
             yield PlumeSensor.from_csv(sensor, buffer)
+
+    def convert_serial_number_to_platform_id(self, serial_numbers: tuple):
+        """Resolve plume internal id from serial number"""
+        dict_ = {}
+        for entry in self.__request_json_sensors()["sensors"]:
+            # create a lookup dict to resolve internal id from serial number
+            dict_[entry["device_id"].replace(":", "")] = entry["id"]
+
+        for sn in serial_numbers:
+            yield dict_[sn]

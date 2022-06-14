@@ -12,6 +12,7 @@ INFLUX_URL = "http://0.0.0.0:8086"
 INFLUX_ORG = "aston"
 INFLUX_TOKEN = "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
 client = InfluxDBClient(url=INFLUX_URL, org=INFLUX_ORG, token=INFLUX_TOKEN)
+
 ZEPHYR_USERNAME = "AstonUniversity"
 ZEPHYR_PASSWORD = "Xo08R83d43e0Kk6"
 
@@ -72,10 +73,10 @@ def read_zephyr_from_influx():
 
 
 def find_entries_in_radius():
-    # find entries within 20 miles of aston
-    query = InfluxQueryBuilder("zephyr").range() \
-        .measurement("air_quality") \
-        .radius(52.48721619374425, -1.8883056239390839, 20.00)
+    # find entries within 20 miles of Aston university
+    query = InfluxQueryBuilder("plume").range().measurement("air_quality").radius(52.48721619374425,
+                                                                                  -1.8883056239390839,
+                                                                                  20.00)
     sensors = Influx.read(query, client=client)
     for sensor in sensors:
         print(sensor)
@@ -93,9 +94,7 @@ def find_entries_in_polygon():
 
 
 if __name__ == '__main__':
-    # print("sensor community")
-    # write_sensor_community_to_influx()
-    print("plume")
-    write_plume_to_influx()
-    # print("zephyr")
-    # write_zephyr_to_influx()
+    print("Searching for Plume readings in polygon")
+    find_entries_in_polygon()
+    print("Searching for Plume readings in radius")
+    find_entries_in_radius()

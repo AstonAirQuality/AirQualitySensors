@@ -35,7 +35,7 @@ class BaseSensorReadable:
         self.rows = list(rows)
 
     def __repr__(self):
-        return f"{self.id} | Headers {self.header} | Row count: {len(self.rows)}"
+        return f"Sensor ID: {self.id} | Row count: {len(self.rows)} | Headers {','.join(self.header)}"
 
     def to_json(self):
         return {"sensor_id": self.id, "header": self.header, "rows": self.rows}

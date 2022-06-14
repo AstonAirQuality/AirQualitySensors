@@ -31,11 +31,14 @@ def check_status(json_):
 def test(bucket):
     print("Testing Bucket:", bucket)
     task_id = create_task(bucket).json()["task_id"]
+
     print("Task ID:", task_id)
     print("Checking task for next 20 second")
+
     for _ in range(20):
         time.sleep(1)
         task = get_task(task_id)
+
         status = check_status(task)
         print("Task Status:", status)
         if status == "SUCCESS":

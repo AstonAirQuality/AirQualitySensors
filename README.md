@@ -15,8 +15,8 @@
 
 1. POST ```http://0.0.0.0:8000/api/tasks/create/{sensor}```, where ```{sensor}``` is one of the above-mentioned buckets,
    include a ```start``` and ```end``` timestamp in the request payload
-2. A task id will be returned the following json format; ```{"task_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}```
-3. GET ```http://0.0.0.0:8000/api/tasks/{task_id}``` where the ```task_id``` is the task id returned from the previous
+2. A task id will be returned in the following json format; ```{"task_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}```
+3. GET ```http://0.0.0.0:8000/api/tasks/{task_id}``` where ```task_id``` is the task id returned from the previous
    POST
 4. A status and result will be returned in the following json
    format; ```{"task_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "task_status": {status}, task_result: {task_result}}```

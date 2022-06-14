@@ -10,3 +10,4 @@ python-multipart==0.0.5
 numpy==1.21.3
 s2sphere
 influxdb-client[ciso]
+mysql-connector-python

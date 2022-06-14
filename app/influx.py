@@ -226,7 +226,7 @@ class Influx:
         """Geo temporal data is returned differently than standard reads and is processed accordingly.
         """
         start = timeit.default_timer()
-        csv_buffer = list(reader.query_csv(query.build(), diainlect=Dialect()))
+        csv_buffer = list(reader.query_csv(query.build(), dialect=Dialect()))
         end = timeit.default_timer()
         aggregator = defaultdict(list)
         print(f"DB READ TIME {end - start}s")
