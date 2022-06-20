@@ -235,4 +235,4 @@ class PlumeWrapper(BaseWrapper):
             dict_[entry["device_id"].replace(":", "")] = entry["id"]
 
         for sn in serial_numbers:
-            yield dict_[sn]
+            yield dict_.get(sn.replace(":", ""))

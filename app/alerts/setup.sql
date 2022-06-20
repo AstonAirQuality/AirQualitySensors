@@ -12,7 +12,9 @@ CREATE TABLE main.plumePlatforms
 (
     platformId                INTEGER UNIQUE AUTO_INCREMENT PRIMARY KEY,
     plumeInternalPlatformId   INTEGER UNIQUE,
-    plumePlatformSerialNumber CHAR(12) UNIQUE
+    plumePlatformSerialNumber VARCHAR(17) UNIQUE,
+    plumePlatformEmail        VARCHAR(50),
+    plumePlatformPassword     VARCHAR(50)
 );
 
 CREATE TABLE main.ownedPlatforms
