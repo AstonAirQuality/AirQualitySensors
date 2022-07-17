@@ -143,9 +143,6 @@ CypressAutomation/cypress/fixtures/Zephyr.json
 CypressAutomation/cypress/fixtures/loginDetails.json
 *.mp4
 
-# ignore all html files
-*.html
-
 #ignore all node modules
 node_modules/
 

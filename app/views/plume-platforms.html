@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Plume Platforms</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h2>Plume Platforms</h2>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Serial Number</th>
+            <th>Email</th>
+            <th>Password</th>
+            <th>Last Synced</th>
+            <th>Owner</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for platform in platforms %}
+        <tr>
+            <td>{{ platform.name }}</td>
+            <td>{{ platform.serial_number }}</td>
+            <td>{{ platform.email }}</td>
+            <td>{{ platform.password }}</td>
+            <td>{{ platform.sync_status }}</td>
+            <td>{{ platform.owner_email }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="container">
+    <h2>Add New Plume Sensor</h2>
+    {% if error %}
+    <h2 style="color: red;">{{ error }}</h2>
+    {% endif %}
+    <form action="/plume-platforms" method="post">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input class="form-control" id="name" name="name">
+        </div>
+        <div class="form-group">
+            <label for="serial-number">Serial Number:</label>
+            <input class="form-control" id="serial-number" name="serial_number">
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input class="form-control" id="email" name="email">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input class="form-control" type="text" id="password" name="password">
+        </div>
+        <label for="owners">Choose Owner: </label>
+        <select class="form-control" id="owners" name="owner_id">
+            <option value=-1>No Owner</option>
+            {% for owner in owners %}
+            <option value={{ owner.id }}>{{ owner.email }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-default" id="submit">Submit</button>
+    </form>
+
+</div>
+
+</body>
+</html>
