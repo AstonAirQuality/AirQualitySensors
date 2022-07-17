@@ -17,7 +17,9 @@ CREATE TABLE sensors
 (
     sensorId   INTEGER UNIQUE AUTO_INCREMENT PRIMARY KEY,
     externalId INTEGER UNIQUE,
-    sensorName VARCHAR(100)
+    ownerId INTEGER,
+    sensorName VARCHAR(100),
+    FOREIGN KEY (ownerId) REFERENCES owners (ownerId) ON DELETE CASCADE
 );
 
 CREATE TABLE plumePlatforms
@@ -29,10 +31,3 @@ CREATE TABLE plumePlatforms
     FOREIGN KEY (sensorId) REFERENCES sensors (sensorId)
 );
 
-CREATE TABLE ownedSensors
-(
-    sensorId INTEGER,
-    ownerId  INTEGER,
-    FOREIGN KEY (sensorId) REFERENCES sensors (sensorId),
-    FOREIGN KEY (ownerId) REFERENCES owners (ownerId)
-);

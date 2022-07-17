@@ -5,6 +5,7 @@ from requests import RequestException
 
 from app.api_wrappers.plume_wrapper import PlumeWrapper
 from app.daos.plume_dao import PlumeDAO
+from app.models.plume_platform import PlumePlatform
 
 
 class PlumeService:
@@ -29,5 +30,11 @@ class PlumeService:
                     platform.sync_status = dt.datetime.fromtimestamp(sensor["last_sync"]).strftime("%d/%m/%Y")
             yield platform.__dict__
 
+    def get_platform(self, platform_id: int):
+        return self.dao.get_platform(platform_id)
+
     def add_platform(self, platform):
         self.dao.add_platform(platform)
+
+    def modify_platform(self, platform: PlumePlatform):
+        self.dao.update_platform(platform)

@@ -100,6 +100,34 @@ def add_platform(request: Request,
                                        "owners": owner_service.get_owners()})
 
 
+@app.get("/plume-platforms/{platform_id}")
+def get_platform(request: Request, platform_id: int):
+    try:
+        return templates.TemplateResponse("plume-platform.html",
+                                          {"request": request,
+                                           "platform": plume_service.get_platform(platform_id),
+                                           "owners": owner_service.get_owners()})
+    except IOError:
+        return RedirectResponse("/plume-platforms")
+
+
+@app.post("/plume-platforms/update")
+def modify_platform(name: str = Form(...),
+                    serial_number: str = Form(...),
+                    email: str = Form(...),
+                    password: str = Form(...),
+                    owner_id: int = Form(...),
+                    platform_id: int = Form(...)):
+    platform = PlumePlatform(id=platform_id, name=name, serial_number=serial_number, email=email, password=password,
+                             owner_id=owner_id)
+    try:
+        if plume_validator.is_valid(platform):
+            plume_service.modify_platform(platform)
+    except (InvalidSerialNumberException, InvalidEmailException, IOError) as e:
+        return RedirectResponse(f"/plume-platforms/{platform_id}", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(f"/plume-platforms", status_code=status.HTTP_302_FOUND)
+
+
 @app.get("/owners")
 def get_owners(request: Request):
     return templates.TemplateResponse("owners.html",

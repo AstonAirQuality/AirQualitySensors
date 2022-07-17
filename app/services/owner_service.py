@@ -6,7 +6,7 @@ class OwnerService:
     def __init__(self, dao: OwnerDAO):
         self.dao = dao
 
-    def get_owner(self, owner_id) -> Owner:
+    def get_owner(self, owner_id):
         return self.dao.get_owner(owner_id).__dict__
 
     def get_owners(self):

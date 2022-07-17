@@ -26,7 +26,7 @@
         <tbody>
         {% for platform in platforms %}
         <tr>
-            <td>{{ platform.name }}</td>
+            <td><a href="/plume-platforms/{{ platform.id }}">{{ platform.name }}</a></td>
             <td>{{ platform.serial_number }}</td>
             <td>{{ platform.email }}</td>
             <td>{{ platform.password }}</td>

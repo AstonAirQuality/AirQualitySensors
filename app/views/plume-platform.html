@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Aston Air Quality</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <h2>Modify Plume Platform</h2>
+    {% if error %}
+    <h2 style="color: red;">{{ error }}</h2>
+    {% endif %}
+    <form action="/plume-platforms/update" method="post">
+        <div class="form-group">
+            <label for="email">Name:</label>
+            <input class="form-control" id="name" name="name" value="{{ platform.name }}">
+        </div>
+        <div class="form-group">
+            <label for="serial_number">Serial Number:</label>
+            <input class="form-control" id="serial_number" name="serial_number" value="{{ platform.serial_number }}">
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input class="form-control" id="email" name="email" value="{{ platform.email }}">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input class="form-control" id="password" name="password" value="{{ platform.password }}">
+        </div>
+        <label for="owners">Owner: </label>
+        <select class="form-control" id="owners" name="owner_id">
+            <option value=-1>No Owner</option>
+            {% for owner in owners %}
+            <option value={{ owner.id }}>{{ owner.email }}</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="platform_id" value="{{ platform.id }}">
+        <button type="submit" class="btn btn-default">Modify Plume Platform</button>
+    </form>
+</div>
+<div class="container">
+    <form action="/plume-platforms/delete" method="post">
+        <input type="hidden" name="platform_id" value="{{ platform.id }}">
+        <button style="color: red;" type="submit" class="btn btn-default">Delete Platform</button>
+    </form>
+</div>
+</body>
+</html>
