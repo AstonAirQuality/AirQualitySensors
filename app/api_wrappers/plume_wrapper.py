@@ -140,9 +140,10 @@ class PlumeWrapper(BaseWrapper):
         return self.__session.get(
             f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}").json()["export_tasks"]
 
-    def __request_json_sensors(self):
+    def request_json_sensors(self, timeout=30):
         return self.__session.get(
-            f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors").json()
+            f"https://api-preprod.plumelabs.com/2.0/user/organizations/{self.org}/sensors",
+            timeout=timeout).json()
 
     def check_last_sync(self, days: int = 3) -> Iterator[tuple]:
         """Returns a list of all sensors with sync status.
@@ -153,7 +154,7 @@ class PlumeWrapper(BaseWrapper):
         :param days: Number of days until the sensor is considered un-synced
         :return: generator of tuples
         """
-        sensors = self.__request_json_sensors()["sensors"]
+        sensors = self.request_json_sensors()["sensors"]
         for sensor in sensors:
             last_sync, id_ = sensor["last_sync"], sensor["device_id"]
             if last_sync is None:
@@ -162,7 +163,7 @@ class PlumeWrapper(BaseWrapper):
             yield id_, (dt.datetime.now() - dt.datetime.fromtimestamp(last_sync)).days < days
 
     def get_sensor_ids(self) -> Iterable[str]:
-        return [sensor["id"] for sensor in self.__request_json_sensors()["sensors"]]
+        return [sensor["id"] for sensor in self.request_json_sensors()["sensors"]]
 
     def get_zip_file_link(self, sensors: Iterable[str], start: dt.datetime, end: dt.datetime,
                           timeout) -> str:
@@ -230,7 +231,7 @@ class PlumeWrapper(BaseWrapper):
     def convert_serial_number_to_platform_id(self, serial_numbers: tuple):
         """Resolve plume internal id from serial number"""
         dict_ = {}
-        for entry in self.__request_json_sensors()["sensors"]:
+        for entry in self.request_json_sensors()["sensors"]:
             # create a lookup dict to resolve internal id from serial number
             dict_[entry["device_id"].replace(":", "")] = entry["id"]
 

@@ -7,15 +7,22 @@ services:
       - "8000:8000"
     command: gunicorn --log-level debug --workers=5 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 main:app
     volumes:
-      - ./app:/app
+      - ./app:/src/app
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
       INFLUXDB_V2_URL: "http://influxdb:8086"
       INFLUXDB_V2_ORG: "aston"
       INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
+      PLUME_EMAIL: "180086320@aston.ac.uk"
+      PLUME_PASSWORD: "aston1234"
+      DATABASE_HOST: "mysql"
+      DATABASE_USERNAME: "root"
+      DATABASE_PASSWORD: "aston1234"
+      DATABASE_NAME: "main"
     links:
       - redis
+      - mysql
   # celery worker process
   celery-worker:
     container_name: celery-worker

@@ -1,4 +1,4 @@
-fastapi==0.60.0
+fastapi
 celery[redis]==5.1.2
 pandas==1.0.4
 requests==2.25.1
@@ -11,3 +11,4 @@ numpy==1.21.3
 s2sphere
 influxdb-client[ciso]
 mysql-connector-python
+jinja2
