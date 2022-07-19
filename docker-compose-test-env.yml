@@ -103,12 +103,6 @@ services:
       MYSQL_DATABASE: "main"
     ports:
       - 3306:3306
-  cloudBeaver-dashboard:
-    image: dbeaver/cloudbeaver
-    ports:
-      - 8978:8978
-    links:
-      - mysql
 
 
 

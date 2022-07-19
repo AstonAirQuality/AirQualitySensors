@@ -38,7 +38,7 @@
     </table>
 </div>
 <div class="container">
-    <h2>Add New Plume Sensor</h2>
+    <h2>Add New Plume Platform</h2>
     {% if error %}
     <h2 style="color: red;">{{ error }}</h2>
     {% endif %}
@@ -59,13 +59,15 @@
             <label for="password">Password:</label>
             <input class="form-control" type="text" id="password" name="password">
         </div>
-        <label for="owners">Choose Owner: </label>
-        <select class="form-control" id="owners" name="owner_id">
-            <option value=-1>No Owner</option>
-            {% for owner in owners %}
-            <option value={{ owner.id }}>{{ owner.email }}</option>
-            {% endfor %}
-        </select>
+        <div class="form-group">
+            <label for="owners">Choose Owner: </label>
+            <select class="form-control" id="owners" name="owner_id">
+                <option value=-1>No Owner</option>
+                {% for owner in owners %}
+                <option value={{ owner.id }}>{{ owner.email }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <button type="submit" class="btn btn-default" id="submit">Submit</button>
     </form>
 

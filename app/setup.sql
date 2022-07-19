@@ -19,7 +19,7 @@ CREATE TABLE sensors
     externalId INTEGER UNIQUE,
     ownerId INTEGER,
     sensorName VARCHAR(100),
-    FOREIGN KEY (ownerId) REFERENCES owners (ownerId) ON DELETE CASCADE
+    FOREIGN KEY (ownerId) REFERENCES owners (ownerId)
 );
 
 CREATE TABLE plumePlatforms
