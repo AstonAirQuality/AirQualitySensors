@@ -1,12 +1,27 @@
 # AirQualitySensors
 
-## Deployment Of Testing Environment
+## Production
+[![Deploy to digital ocean](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml/badge.svg?branch=main)](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml)  
+
+Admin web app available on: http://178.62.31.177:8000 (open)  
+Flower monitoring dashboard available on: http://178.62.31.177:8888 (protected)
+
+**Warning**  
+GitHub will automatically deploy the latest version of the main branch into the production environment on every push,
+thus it is important to keep the main branch in a production ready state at all times.
+
+## Deployment of Testing Environment
 
 1. Ensure [Docker](https://www.docker.com/) is installed
 2. Clone the repo
 3. Navigate to the project root in a terminal window
-4. Run the command ```docker compose -f docker-compose-test-env.yml up -d```
+4. Run the command ```docker compose --env-file /path/to/env/file -f docker-compose-test-env.yml up -d```
 5. Wait until Docker builds and deploys containers.
+
+## Test environment: Administration
+
+- Flower monitoring dashboard available on ```http://0.0.0.0:8888```
+- Influx DB available on ```http://0.0.0.0:8086```
 
 ## Usage
 
@@ -25,11 +40,6 @@
 7. ```{task_result}```will be populated when the task succeeds in the following json
    format; ```[{"sensor_id": {sensor_id}, "header": {header}, "rows": [rows]}]```
 
-## Administration
-
-- Flower monitoring server available on ```http://0.0.0.0:8888```
-- Influx DB available on ```http://0.0.0.0:8086```
-
-## Architecture
+## Architecture (outdated)
 
 ![architecture](./docs/desgin.png)
