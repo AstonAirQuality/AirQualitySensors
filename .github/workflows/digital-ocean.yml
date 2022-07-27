@@ -12,15 +12,18 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: deploy-on-droplet
+      - name: Cleanup old deployment
         uses: garygrossgarten/github-action-ssh@release
         with:
-          command: | 
-          docker compose down
-          docker system prune --all --force
-          git clone https://github.com/AstonAirQuality/AirQualitySensors.git
-          cd AirQualitySensors/main
-          docker compose up -d
+          command: cd AirQualitySensors && docker-compose down && docker system prune --all --force && cd .. && rm -rf AirQualitySensors
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          password: ${{ secrets.DROPLET_PASSWORD }}
+
+      - name: Deploy new release
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: git clone https://github.com/AstonAirQuality/AirQualitySensors.git && cd AirQualitySensors && docker-compose --env-file ../secrets/env.prod up -d
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
           password: ${{ secrets.DROPLET_PASSWORD }}
