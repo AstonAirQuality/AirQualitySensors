@@ -24,6 +24,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="views")
 
 connection = mysql.connector.connect(
+    port=os.environ.get("DATABASE_PORT"),
     host=os.environ.get("DATABASE_HOST"),
     user=os.environ.get("DATABASE_USERNAME"),
     password=os.environ.get("DATABASE_PASSWORD"),
@@ -128,6 +129,12 @@ def modify_platform(name: str = Form(...),
     return RedirectResponse(f"/plume-platforms", status_code=status.HTTP_302_FOUND)
 
 
+@app.post("/plume-platforms/delete")
+def delete_platform(platform_id: int = Form(...)):
+    plume_service.delete_platform(platform_id)
+    return RedirectResponse(f"/plume-platforms", status_code=status.HTTP_302_FOUND)
+
+
 @app.get("/owners")
 def get_owners(request: Request):
     return templates.TemplateResponse("owners.html",
@@ -160,9 +167,15 @@ def get_owner(request: Request, owner_id: int):
 
 
 @app.post("/owners/delete")
-def delete_owner(owner_id: int = Form(...)):
-    owner_service.delete_owner(owner_id)
-    return RedirectResponse("/owners", status_code=status.HTTP_302_FOUND)
+def delete_owner(request: Request, owner_id: int = Form(...)):
+    try:
+        owner_service.delete_owner(owner_id)
+        return RedirectResponse("/owners", status_code=status.HTTP_302_FOUND)
+    except IntegrityError:
+        return templates.TemplateResponse("owner.html",
+                                          {"request": request,
+                                           "error": "Unable to delete owner as it currently has assigned sensors",
+                                           "owner": owner_service.get_owner(owner_id)})
 
 
 @app.post("/owners/update")

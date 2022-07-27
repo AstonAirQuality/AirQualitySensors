@@ -14,12 +14,12 @@ services:
       INFLUXDB_V2_URL: "http://influxdb:8086"
       INFLUXDB_V2_ORG: "aston"
       INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
-      PLUME_EMAIL: "180086320@aston.ac.uk"
-      PLUME_PASSWORD: "aston1234"
       DATABASE_HOST: "mysql"
       DATABASE_USERNAME: "root"
-      DATABASE_PASSWORD: "aston1234"
+      DATABASE_PASSWORD: "password123"
       DATABASE_NAME: "main"
+      PLUME_EMAIL: "${PLUME_EMAIL}"
+      PLUME_PASSWORD: "${PLUME_PASSWORD}"
     links:
       - redis
       - mysql
@@ -33,12 +33,12 @@ services:
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-      ZEPHYR_USERNAME: "AstonUniversity"
-      ZEPHYR_PASSWORD: "Xo08R83d43e0Kk6"
-      SC_USERNAME: "190102421@aston.ac.uk"
-      SC_PASSWORD: "RiyadtheWizard"
-      PLUME_EMAIL: "180086320@aston.ac.uk"
-      PLUME_PASSWORD: "aston1234"
+      ZEPHYR_USERNAME: "${ZEPHYR_USERNAME}"
+      ZEPHYR_PASSWORD: "${ZEPHYR_PASSWORD}"
+      SC_USERNAME: "${SC_USERNAME}"
+      SC_PASSWORD: "${SC_PASSWORD}"
+      PLUME_EMAIL: "${PLUME_EMAIL}"
+      PLUME_PASSWORD: "${PLUME_PASSWORD}"
       INFLUXDB_V2_URL: "http://influxdb:8086"
       INFLUXDB_V2_ORG: "aston"
       INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
@@ -55,12 +55,12 @@ services:
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-      ZEPHYR_USERNAME: "AstonUniversity"
-      ZEPHYR_PASSWORD: "Xo08R83d43e0Kk6"
-      SC_USERNAME: "190102421@aston.ac.uk"
-      SC_PASSWORD: "RiyadtheWizard"
-      PLUME_EMAIL: "180086320@aston.ac.uk"
-      PLUME_PASSWORD: "aston1234"
+      ZEPHYR_USERNAME: "${ZEPHYR_USERNAME}"
+      ZEPHYR_PASSWORD: "${ZEPHYR_PASSWORD}"
+      SC_USERNAME: "${SC_USERNAME}"
+      SC_PASSWORD: "${SC_PASSWORD}"
+      PLUME_EMAIL: "${PLUME_EMAIL}"
+      PLUME_PASSWORD: "${PLUME_PASSWORD}"
       INFLUXDB_V2_URL: "http://influxdb:8086"
       INFLUXDB_V2_ORG: "aston"
       INFLUXDB_V2_TOKEN: "2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA=="
@@ -70,18 +70,18 @@ services:
   # celery flower to monitor celery tasks
   flower:
     image: mher/flower
-    command: [ "celery", "flower", "--basic_auth=aston:aston1234" ]
+    command: [ "celery", "flower" ]
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       FLOWER_PORT: "8888"
       FLOWER_HOST: "0.0.0.0"
     ports:
-      - 8888:8888
+      - "8888:8888"
   redis:
     container_name: redis
     image: redis:6-alpine
     ports:
-      - 6379:6379
+      - "6379:6379"
   # local instance of influx db for testing environment
   influxdb:
     image: influxdb
@@ -92,17 +92,17 @@ services:
     links:
       - influxdb
     image: influxdb
-    entrypoint: influx setup --bucket plume -t 2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA== -o aston --username=aston --password=aston1234 --host=http://influxdb:8086 -f
+    entrypoint: influx setup --bucket plume -t 2UVwEBfD4Kj5FrN5WJHyxcDvw73EfL5RV1IpGE4zv14rIR2RAY-jMFkopjk1_iamFfcwwsHHND2R1Bn4-9mQSA== -o aston --username=aston --password=password1234 --host=http://influxdb:8086 -f
     restart: on-failure:10
     depends_on:
       - influxdb
   mysql:
     image: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "aston1234"
+      MYSQL_ROOT_PASSWORD: "password1234"
       MYSQL_DATABASE: "main"
     ports:
-      - 3306:3306
+      - "3306:3306"
 
 
 

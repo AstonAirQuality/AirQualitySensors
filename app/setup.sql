@@ -17,14 +17,14 @@ CREATE TABLE sensors
 (
     sensorId   INTEGER UNIQUE AUTO_INCREMENT PRIMARY KEY,
     externalId INTEGER UNIQUE,
-    ownerId INTEGER,
+    ownerId    INTEGER,
     sensorName VARCHAR(100),
     FOREIGN KEY (ownerId) REFERENCES owners (ownerId)
 );
 
 CREATE TABLE plumePlatforms
 (
-    sensorId     INTEGER,
+    sensorId     INTEGER PRIMARY KEY UNIQUE,
     serialNumber VARCHAR(17) UNIQUE,
     email        VARCHAR(50),
     password     VARCHAR(50),

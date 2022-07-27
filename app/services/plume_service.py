@@ -38,3 +38,6 @@ class PlumeService:
 
     def modify_platform(self, platform: PlumePlatform):
         self.dao.update_platform(platform)
+
+    def delete_platform(self, platform_id: int):
+        self.dao.delete_platform(platform_id)
