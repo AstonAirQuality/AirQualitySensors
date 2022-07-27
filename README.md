@@ -1,5 +1,8 @@
 # AirQualitySensors
 
+## TODO:
+- Currently exploring major issues with database connection pools resulting in inconsistent queries. 
+
 ## Production
 [![Deploy to digital ocean](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml/badge.svg?branch=main)](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml)  
 
