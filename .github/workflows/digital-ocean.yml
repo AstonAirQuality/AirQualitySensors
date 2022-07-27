@@ -2,7 +2,7 @@ name: Deploy to digital ocean
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 
 permissions:
