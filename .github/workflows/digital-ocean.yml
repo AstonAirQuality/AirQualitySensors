@@ -1,0 +1,27 @@
+name: Deploy to digital ocean
+
+on:
+  push:
+    branches: [ "master" ]
+
+
+permissions:
+  contents: read
+
+jobs:
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: deploy-on-droplet
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: ls -a
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_SSH_KEY }}
+          privateKey: ${{ secrets.PRIVATE_KEY}}
