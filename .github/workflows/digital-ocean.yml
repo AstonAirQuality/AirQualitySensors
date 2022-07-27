@@ -15,7 +15,7 @@ jobs:
       - name: deploy-on-droplet
         uses: garygrossgarten/github-action-ssh@release
         with:
-          command: > 
+          command: | 
           docker compose down
           docker system prune --all --force
           git clone https://github.com/AstonAirQuality/AirQualitySensors.git
