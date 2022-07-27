@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
 
-
 permissions:
   contents: read
 
@@ -17,11 +16,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
+
       - name: deploy-on-droplet
         uses: garygrossgarten/github-action-ssh@release
         with:
           command: ls -a
           host: ${{ secrets.DROPLET_IP }}
-          username: ${{ secrets.DROPLET_SSH_KEY }}
-          privateKey: ${{ secrets.PRIVATE_KEY}}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          password: ${{ secrets.DROPLET_PASSWORD }}
