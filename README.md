@@ -1,10 +1,8 @@
 # AirQualitySensors
 
-## TODO:
-- Currently exploring major issues with database connection pools resulting in inconsistent queries. 
-
 ## Production
-[![Deploy to digital ocean](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml/badge.svg?branch=main)](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml)  
+
+[![Deploy to digital ocean](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml/badge.svg?branch=main)](https://github.com/AstonAirQuality/AirQualitySensors/actions/workflows/digital-ocean.yml)
 
 Admin web app available on: http://178.62.31.177:8000 (open)  
 Flower monitoring dashboard available on: http://178.62.31.177:8888 (protected)
@@ -43,6 +41,6 @@ thus it is important to keep the main branch in a production ready state at all 
 7. ```{task_result}```will be populated when the task succeeds in the following json
    format; ```[{"sensor_id": {sensor_id}, "header": {header}, "rows": [rows]}]```
 
-## Architecture (outdated)
+## Architecture
 
-![architecture](./docs/desgin.png)
+![architecture](./docs/desgin.svg)
