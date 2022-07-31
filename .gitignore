@@ -149,3 +149,6 @@ node_modules/
 #ignore data files
 *.zip
 *.csv
+
+# digital ocean resources
+digital-ocean-resources.txt

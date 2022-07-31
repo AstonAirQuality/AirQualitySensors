@@ -1,12 +1,12 @@
 import os
 from typing import Optional
 
-import mysql.connector
 import uvicorn
 from fastapi import FastAPI, Form, Request
 from celery.result import AsyncResult
 from fastapi.templating import Jinja2Templates
 from mysql.connector import IntegrityError
+from mysql.connector.pooling import MySQLConnectionPool
 from starlette import status
 from starlette.responses import RedirectResponse
 
@@ -23,22 +23,24 @@ from tasks import read_plume_data, read_zephyr_data, read_sensor_community_data
 app = FastAPI()
 templates = Jinja2Templates(directory="views")
 
-connection = mysql.connector.connect(
-    port=os.environ.get("DATABASE_PORT"),
-    host=os.environ.get("DATABASE_HOST"),
-    user=os.environ.get("DATABASE_USERNAME"),
-    password=os.environ.get("DATABASE_PASSWORD"),
-    database=os.environ.get("DATABASE_NAME")
-)
+db_config = {"port": os.environ.get("DATABASE_PORT"),
+             "host": os.environ.get("DATABASE_HOST"),
+             "user": os.environ.get("DATABASE_USERNAME"),
+             "password": os.environ.get("DATABASE_PASSWORD"),
+             "database": os.environ.get("DATABASE_NAME")}
+
+cnx_pool = MySQLConnectionPool(pool_name="connection_pool",
+                               pool_size=5,
+                               **db_config)
 
 func_map = {"plume": read_plume_data,
             "zephyr": read_zephyr_data,
             "sensor_community": read_sensor_community_data}
 
-plume_service = PlumeService(PlumeDAO(connection))
+plume_service = PlumeService(PlumeDAO(cnx_pool))
 plume_validator = PlumePlatformValidator()
 
-owner_service = OwnerService(OwnerDAO(connection))
+owner_service = OwnerService(OwnerDAO(cnx_pool))
 
 links = ["/docs", "/owners", "/plume-platforms"]
 
@@ -174,7 +176,7 @@ def delete_owner(request: Request, owner_id: int = Form(...)):
     except IntegrityError:
         return templates.TemplateResponse("owner.html",
                                           {"request": request,
-                                           "error": "Unable to delete owner as it currently has assigned sensors",
+                                           "error": "Unable to delete owner as they currently have assigned sensors",
                                            "owner": owner_service.get_owner(owner_id)})
 
 
