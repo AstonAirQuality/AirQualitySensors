@@ -1,6 +1,6 @@
 from mysql.connector.pooling import MySQLConnectionPool
 
-from app.daos.BaseDAO import BaseDAO
+from app.daos.base_dao import BaseDAO
 from app.models.owner import Owner
 
 

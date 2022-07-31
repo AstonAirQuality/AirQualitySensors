@@ -5,7 +5,7 @@ services:
     build: ./app
     ports:
       - "8000:8000"
-    command: gunicorn --log-level debug --workers=5 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 main:app
+    command: gunicorn --log-level debug --workers=3 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 main:app
     volumes:
       - ./app:/src/app
     environment:
@@ -99,7 +99,7 @@ services:
   mysql:
     image: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "password1234"
+      MYSQL_ROOT_PASSWORD: "password123"
       MYSQL_DATABASE: "main"
     ports:
       - "3306:3306"
