@@ -1,18 +1,18 @@
 import datetime
+import os
 
 from app.api_wrappers.plume_wrapper import PlumeWrapper
 from app.api_wrappers.sensor_community_wrapper import SCWrapper
 from app.api_wrappers.zephyr_wrapper import ZephyrWrapper
 
-# TODO: Make environment variables
-ZEPHYR_USERNAME = "AstonUniversity"
-ZEPHYR_PASSWORD = "Xo08R83d43e0Kk6"
+ZEPHYR_USERNAME = os.environ.get("ZEPHYR_USERNAME")
+ZEPHYR_PASSWORD = os.environ.get("ZEPHYR_PASSWORD")
 
-SC_USERNAME = "190102421@aston.ac.uk"
-SC_PASSWORD = "RiyadtheWizard"
+SC_USERNAME = os.environ.get("SC_USERNAME")
+SC_PASSWORD = os.environ.get("SC_PASSWORD")
 
-PLUME_EMAIL = "180086320@aston.ac.uk"
-PLUME_PASSWORD = "aston1234"
+PLUME_EMAIL = os.environ.get("PLUME_EMAIL")
+PLUME_PASSWORD = os.environ.get("PLUME_PASSWORD")
 
 
 def zephyr_test():
