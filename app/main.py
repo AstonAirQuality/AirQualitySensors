@@ -30,7 +30,7 @@ db_config = {"port": os.environ.get("DATABASE_PORT"),
              "database": os.environ.get("DATABASE_NAME")}
 
 cnx_pool = MySQLConnectionPool(pool_name="connection_pool",
-                               pool_size=5,
+                               pool_size=3,
                                **db_config)
 
 func_map = {"plume": read_plume_data,
