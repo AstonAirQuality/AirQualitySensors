@@ -1,4 +1,3 @@
-import pydantic.dataclasses
 import datetime as dt
 
 from requests import RequestException
